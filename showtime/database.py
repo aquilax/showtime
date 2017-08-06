@@ -15,7 +15,7 @@ class Database():
     db = None
 
     def __init__(self, file_name):
-        self.db = TinyDB(file_name)
+        self.db = TinyDB(file_name, sort_keys=True, indent=4)
         self.show_table = self.db.table('show')
         self.episode_table = self.db.table('episode')
 
