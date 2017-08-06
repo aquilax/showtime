@@ -1,0 +1,2 @@
+python-tvmaze==1.0.1
+cmd2==0.7.5
