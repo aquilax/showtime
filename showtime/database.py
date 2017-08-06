@@ -65,12 +65,28 @@ class Database():
                     'watched': ''
                 })
 
-    def mark_watched(self, episode_id: int):
+    def update_watched(self, episode_id: int, watched: bool):
         Episode = Query()
+        watched_value = datetime.utcnow().isoformat() if watched else ''
         self.episode_table.update({
-            'watched': datetime.utcnow().isoformat()
+            'watched': watched_value
         }, Episode.id == episode_id)
 
     def get_unwatched(self):
         Episode = Query()
         return self.episode_table.search(Episode.watched == '')
+
+    def update_watched_show(self, show_id:int, watched: bool):
+        Episode = Query()
+        watched_value = datetime.utcnow().isoformat() if watched else ''
+        self.episode_table.update({
+            'watched': watched_value
+        }, Episode.show_id == show_id)
+
+    def update_watched_show_season(self, show_id:int, season:int, watched: bool):
+        Episode = Query()
+        watched_value = datetime.utcnow().isoformat() if watched else ''
+        self.episode_table.update({
+            'watched': watched_value
+        }, ((Episode.show_id == show_id) & (Episode.season == season)))
+
