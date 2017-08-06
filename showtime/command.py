@@ -3,16 +3,18 @@ from cmd2 import Cmd
 from tvmaze.api import Api
 from database import Database
 from output import Output
+from config import Config
 
 class Showtime(Cmd):
 
     prompt = '(showtime) '
 
-    def __init__(self, api, db):
+    def __init__(self, api, db, config):
         Cmd.__init__(self)
         self.api = api
         self.db = db
-        self.output = Output(self.poutput)
+        self.config = config
+        self.output = Output(self.poutput, self.perror, self.pfeedback)
 
     def do_search(self, query):
         'Search shows [search Breaking Bad]'
@@ -29,8 +31,16 @@ class Showtime(Cmd):
         self.output.poutput('Added show: ({id}) {name} - {permiered}'.format(
                 id=show.id, name=show.name, permiered=show.premiered))
 
+    def do_shows(self, line):
+        shows = self.db.get_shows()
+        shows_table = self.output.shows_table(shows)
+        self.output.poutput(shows_table)
+
     def do_episodes(self, show_id):
         show = db.get_show(int(show_id))
+        if not show:
+            self.output.perror('Show {id} not found'.format(id=show_id))
+            return
         episodes = db.get_episodes(int(show_id))
 
         episodes_tabe = self.output.format_episodes(show, episodes)
@@ -58,7 +68,12 @@ class Showtime(Cmd):
         episodes_tabe = self.output.format_unwatched(episodes)
         self.output.poutput(episodes_tabe)
 
+    def do_config(self, line):
+        self.output.poutput(self.config.get('Database', 'Path'))
+
 if __name__ == '__main__':
     api = Api()
-    db = Database('/tmp/temp.json')
-    Showtime(api, db).cmdloop()
+    config = Config()
+    config.load_config()
+    db = Database(config.get('Database', 'Path'))
+    Showtime(api, db, config).cmdloop()

@@ -2,11 +2,19 @@ from terminaltables import SingleTable as Table
 
 class Output():
 
-    def __init__(self, print_function):
+    def __init__(self, print_function, error_function, feedback_function):
         self.print_function = print_function
+        self.error_function = error_function
+        self.feedback_function = feedback_function
 
     def poutput(self, str):
         self.print_function(str)
+
+    def perror(self, str):
+        self.error_function(str)
+
+    def pfeedback(self, str):
+        self.feedback_function(str)
 
     def format_search_results(self, search_result):
         data = []
@@ -14,6 +22,7 @@ class Output():
             'ID',
             'Name',
             'Premiered',
+            'Status'
             'URL'
         ])
         for show in search_result:
@@ -21,13 +30,14 @@ class Output():
                 show.id,
                 show.name,
                 show.premiered,
+                show.status,
                 show.url
             ])
         return Table(data, title='Search Results').table
 
     def format_episodes(self, show, episodes):
-        title = '({id}) {name} - {permiered}'.format(
-                id=show['id'], name=show['name'], permiered=show['permiered'])
+        title = '({id}) {name} - {premiered}'.format(
+                id=show['id'], name=show['name'], premiered=show['premiered'])
         data =self.get_episodes_data(episodes)
         return Table(data, title=title).table
 
@@ -55,4 +65,22 @@ class Output():
     def format_unwatched(self, episodes):
         title = 'Episodes to watch'
         data =self.get_episodes_data(episodes)
+        return Table(data, title=title).table
+
+    def shows_table(self, shows):
+        data = []
+        data.append([
+            'ID',
+            'Name',
+            'Premiered',
+            'Status'
+        ])
+        for show in shows:
+            data.append([
+                show['id'],
+                show['name'],
+                show['premiered'],
+                show['status'],
+            ])
+        title = 'Followed shows'
         return Table(data, title=title).table

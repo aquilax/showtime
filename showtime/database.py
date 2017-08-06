@@ -25,7 +25,7 @@ class Database():
             self.show_table.insert({
                 'id': show.id,
                 'name': show.name,
-                'permiered': show.premiered,
+                'premiered': show.premiered,
                 'status': show.status
             })
         return show.id
