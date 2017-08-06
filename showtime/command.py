@@ -1,3 +1,4 @@
+from ratelimit import rate_limited
 from cmd2 import Cmd
 from tvmaze.api import Api
 from database import Database
@@ -10,15 +11,19 @@ class Showtime(Cmd):
         self.db = db
 
     def do_search(self, query):
+        'Search shows [search Breaking Bad]'
         search_result = api.search.shows(query)
         for show in search_result:
             print('({id}) {name} - {permiered} {url}'.format(
                 id=show.id, name=show.name, permiered=show.premiered,
                 url=show.url))
 
-    def do_add(self, show_id):
+    def do_follow(self, show_id):
+        'Follow show by id [follow 3]'
         show = api.show.get(show_id)
         self.db.add(show)
+        episodes = self._get_episodes(int(show.id))
+        self.db.sync_episodes(show.id, episodes);
         print('Added show: ({id}) {name} - {permiered}'.format(
                 id=show.id, name=show.name, permiered=show.premiered))
 
@@ -36,13 +41,18 @@ class Showtime(Cmd):
                 id=episode['id'], name=episode['name'],
                 airdate=episode['airdate'], watched=watched))
 
-    def do_sync(self, line):
+
+    @rate_limited(20, 10)
+    def _get_episodes(self, show_id: int):
+        return self.api.show.episodes(show_id)
+
+    def do_sync(self, update):
         print('Syncing shows...')
-        shows = self.db.get_shows()
+        shows = self.db.get_active_shows() if update else self.db.get_shows()
         for show in shows:
             print('({id}) {name} - {permiered}'.format(
                 id=show['id'], name=show['name'], permiered=show['permiered']))
-            episodes = self.api.show.episodes(show['id'])
+            episodes = self._get_episodes(int(show['id']))
             self.db.sync_episodes(show['id'], episodes);
         print('Done')
 

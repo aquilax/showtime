@@ -1,7 +1,14 @@
+from enum import Enum
 from datetime import datetime
 import os
 import json
 from tinydb import TinyDB, Query
+
+
+class ShowStatus(Enum):
+    ENDED = 'Ended'
+    RUNNING = 'Running'
+
 
 class Database():
 
@@ -18,12 +25,17 @@ class Database():
             self.show_table.insert({
                 'id': show.id,
                 'name': show.name,
-                'permiered': show.premiered
+                'permiered': show.premiered,
+                'status': show.status
             })
         return show.id
 
     def get_shows(self):
         return self.show_table.all()
+
+    def get_active_shows(self):
+        Show = Query()
+        return self.show_table.search(Show.status != ShowStatus.ENDED.value)
 
     def get_show(self, show_id: int):
         Show = Query()
