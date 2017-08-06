@@ -1,9 +1,9 @@
 from ratelimit import rate_limited
 from cmd2 import Cmd
 from tvmaze.api import Api
-from database import Database
-from output import Output
-from config import Config
+from showtime.database import Database
+from showtime.output import Output
+from showtime.config import Config
 
 class Showtime(Cmd):
 
@@ -71,9 +71,13 @@ class Showtime(Cmd):
     def do_config(self, line):
         self.output.poutput(self.config.get('Database', 'Path'))
 
-if __name__ == '__main__':
+def main():
     api = Api()
     config = Config()
     config.load_config()
     db = Database(config.get('Database', 'Path'))
     Showtime(api, db, config).cmdloop()
+
+
+if __name__ == '__main__':
+    main()
