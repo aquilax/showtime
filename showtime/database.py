@@ -47,6 +47,7 @@ class Database():
 
     def sync_episodes(self, show_id, episodes):
         exising_episodes = self.get_episodes(show_id)
+        queue = []
         for episode in episodes:
             matched = [x for x in exising_episodes if x['id'] == episode.id]
             if not matched:
@@ -54,7 +55,7 @@ class Database():
                     season=episode.season, episode=episode.number, id=episode.id,
                     name=episode.name, airdate=episode.airdate))
 
-                self.episode_table.insert({
+                queue.append({
                     'id': episode.id,
                     'show_id': show_id,
                     'season': episode.season,
@@ -64,6 +65,7 @@ class Database():
                     'runtime': episode.runtime,
                     'watched': ''
                 })
+        self.episode_table.insert_multiple(queue)
 
     def update_watched(self, episode_id: int, watched: bool):
         Episode = Query()
@@ -90,3 +92,17 @@ class Database():
             'watched': watched_value
         }, ((Episode.show_id == show_id) & (Episode.season == season)))
 
+    def last_seen(self, show_id, season, number):
+        episodes = self.get_episodes(show_id);
+        eids = []
+        for episode in episodes:
+            if episode['season'] > season:
+                continue
+            if episode['season'] < season or (episode['season'] == season and episode['number'] < number):
+                eids.append(episode.eid)
+                continue
+        watched_value = datetime.utcnow().isoformat()
+        self.episode_table.update({
+            'watched': watched_value
+        }, eids=eids)
+        return len(eids)
