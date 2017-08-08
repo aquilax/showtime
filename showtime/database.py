@@ -51,7 +51,7 @@ class Database():
         for episode in episodes:
             matched = [x for x in exising_episodes if x['id'] == episode.id]
             if not matched:
-                print('Adding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
+                print('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
                     season=episode.season, episode=episode.number, id=episode.id,
                     name=episode.name, airdate=episode.airdate))
 
@@ -65,6 +65,20 @@ class Database():
                     'runtime': episode.runtime,
                     'watched': ''
                 })
+            else:
+                matched_episode = matched.pop()
+                if matched_episode['name'] != episode.name:
+                    print('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
+                        season=episode.season, episode=episode.number, id=episode.id,
+                        name=episode.name, airdate=episode.airdate))
+                    Episode = Query()
+                    self.episode_table.update({
+                        'name': episode.name,
+                        'airdate': episode.airdate,
+                        'runtime': episode.runtime,
+                        'season': episode.season,
+                        'number': episode.number,
+                    }, Episode.id == episode.id)
         self.episode_table.insert_multiple(queue)
 
     def update_watched(self, episode_id: int, watched: bool):

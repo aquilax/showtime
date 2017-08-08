@@ -7,6 +7,9 @@ from showtime.config import Config
 
 class Showtime(Cmd):
 
+    intro = '======== SHOWTIME SHOW TRACKER ========\n' + \
+            'type `help` to get help, `quit` to exit'
+
     current_show = None
 
     def __init__(self, api, db, config):
@@ -148,9 +151,7 @@ def main():
     config = Config()
     config.load_config()
     db = Database(config.get('Database', 'Path'))
-    intro ='''=== SHOWTIME SHOW TRACKER ===
-type `help` to get help, `quit` to exit'''
-    Showtime(api, db, config).cmdloop(intro)
+    Showtime(api, db, config).cmdloop()
 
 
 if __name__ == '__main__':
