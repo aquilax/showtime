@@ -32,32 +32,37 @@ class Showtime(Cmd):
             return int(self.current_show['id'])
         raise Exception('Please provide show_id')
 
+    @rate_limited(20, 10)
+    def _get_episodes(self, show_id: int):
+        return self.api.show.episodes(show_id)
+
+
     def do_search(self, query):
-        'Search shows [search Breaking Bad]'
+        '''Search shows [search <query>]'''
         search_result = self.api.search.shows(query)
         search_result_tabe = self.output.format_search_results(search_result)
         self.output.poutput(search_result_tabe)
 
     def do_follow(self, show_ids):
-        'Follow show(s) by id [follow 3,4,2]'
+        '''Follow show(s) by id [follow <show_id>[,<show_id>...]]'''
         show_ids = self._get_list(show_ids)
         for show_id in show_ids:
             show = self.api.show.get(show_id)
             self.db.add(show)
             episodes = self._get_episodes(int(show.id))
             self.db.sync_episodes(show.id, episodes);
-            self.output.poutput('Added show: ({id}) {name} - {permiered}'.format(
-                    id=show.id, name=show.name, permiered=show.premiered))
+            self.output.poutput('Added show: ({id}) {name} - {premiered}'.format(
+                    id=show.id, name=show.name, premiered=show.premiered))
 
-    def do_shows(self, line):
-        'Show all followed shows [shows]'
+    def do_shows(self, _):
+        '''Show all followed shows [shows]'''
         shows = self.db.get_shows()
         shows = sorted(shows, key=lambda k: k['name'])
         shows_table = self.output.shows_table(shows)
         self.output.poutput(shows_table)
 
     def do_episodes(self, show_id):
-        'Show all episodes for a show [episodes]'
+        '''Show all episodes for a show [episodes <show_id>]'''
         show_id = self._get_show_id(show_id)
         show = self.db.get_show(show_id)
         if not show:
@@ -69,7 +74,7 @@ class Showtime(Cmd):
         self.output.poutput(episodes_tabe)
 
     def do_set_show(self, show_id):
-        'Set show in context'
+        '''Set show in context [set_show <show_id>]'''
         show_id = self._get_show_id(show_id)
         show = self.db.get_show(show_id)
         if not show:
@@ -79,75 +84,73 @@ class Showtime(Cmd):
         self.prompt = self._get_prompt(show['name'])
 
     def do_unset_show(self, _):
+        '''Remove show from the context [unset_show]'''
         self.current_show = None
         self.prompt = self._get_prompt()
 
-    @rate_limited(20, 10)
-    def _get_episodes(self, show_id: int):
-        return self.api.show.episodes(show_id)
-
     def do_sync(self, update):
-        'Syncronise episodes with TVMaze [sync|sync update]'
+        '''Syncronise episodes with TVMaze [sync]'''
         self.pfeedback('Syncing shows...')
-        shows = self.db.get_active_shows() if update else self.db.get_shows()
+        shows = self.db.get_active_shows()
         for show in shows:
-            self.output.poutput('({id}) {name} - {permiered}'.format(
-                id=show['id'], name=show['name'], permiered=show['permiered']))
+            self.output.poutput('({id}) {name} - {premiered}'.format(
+                id=show['id'], name=show['name'], premiered=show['premiered']))
             episodes = self._get_episodes(int(show['id']))
             self.db.sync_episodes(show['id'], episodes);
         self.pfeedback('Done')
 
     def do_watch(self, episode_id):
-        'Mark episode as watched [watch 33]'
+        '''Mark episode as watched [watch <episode_id>]'''
         self.db.update_watched(int(episode_id), True)
 
     def do_unwatch(self, episode_id):
-        'Mark episode as not watched [unwatch 33]'
+        '''Mark episode as not watched [unwatch <episode_id>]'''
         self.db.update_watched(int(episode_id), False)
 
     def do_watch_all(self, show_id):
-        'Mark all episodes in a show as watched'
+        '''Mark all episodes in a show as watched [watch_all <show_id>]'''
         show_id = self._get_show_id(show_id)
         self.db.update_watched_show(show_id, True)
 
     def do_unwatch_all(self, show_id):
-        'Mark all episodes in a show as not watched'
+        '''Mark all episodes in a show as not watched [unwatch_all <show_id>]'''
         show_id = self._get_show_id(show_id)
         self.db.update_watched_show(show_id, False)
 
     def do_watch_all_season(self, line):
-        'Mark all episodes in a show and season as watched'
+        '''Mark all episodes in a show and season as watched [watch_all_season <show_id> <season>]'''
         show_id, season = line.split(' ')
         self.db.update_watched_show_season(int(show_id), int(season), True)
 
     def do_unwatch_all_season(self, line):
-        'Mark all episodes in a show and season as not watched'
+        '''Mark all episodes in a show and season as not watched [unwatch_all_season <show_id> <season>]'''
         show_id, season = line.split(' ')
         self.db.update_watched_show_season(int(show_id), int(season), False)
 
-    def do_unwatched(self, line):
-        'Show list of all episodes not watched yet'
+    def do_unwatched(self, _):
+        '''Show list of all episodes not watched yet [unwatched]'''
         episodes = self.db.get_unwatched()
         episodes_tabe = self.output.format_unwatched(episodes)
         self.output.poutput(episodes_tabe)
 
-    def do_config(self, line):
-        'Show current configuration'
+    def do_config(self, _):
+        '''Show current configuration [config]'''
         self.output.poutput('Database path: {path}'.format(path=self.config.get('Database', 'Path')))
 
     def do_last_seen(self, line):
-        'Mark all episodes as seen up to the defined one [last_seen show_id season episode]'
+        '''Mark all episodes as seen up to the defined one [last_seen show_id <season> <episode>]'''
         show_id, season, episode = line.split(' ')
         count = self.db.last_seen(int(show_id), int(season), int(episode))
         self.output.poutput('{count} episodes marked as seen'.format(count=count))
-
 
 def main():
     api = Api()
     config = Config()
     config.load_config()
     db = Database(config.get('Database', 'Path'))
-    Showtime(api, db, config).cmdloop()
+    intro ='''=== SHOWTIME SHOW TRACKER ===
+type `help` to get help, `quit` to exit'''
+    Showtime(api, db, config).cmdloop(intro)
 
 
 if __name__ == '__main__':

@@ -6,8 +6,11 @@ setup(
     packages=[
         'showtime',
     ],
+    author = 'Evgeniy Vasilev',
+    author_email = 'aquilax@gmail.com',
+    url = 'https://github.com/aquilax/showtime',
+    keywords = ['tv', 'command line', 'application'],
     license='LICENSE',
-    long_description=open('README.md').read(),
     install_requires = [
         'cmd2==0.7.5',
         'python-tvmaze==1.0.1',
