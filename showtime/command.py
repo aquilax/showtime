@@ -57,9 +57,12 @@ class Showtime(Cmd):
             self.output.poutput('Added show: ({id}) {name} - {premiered}'.format(
                     id=show.id, name=show.name, premiered=show.premiered))
 
-    def do_shows(self, _):
-        '''Show all followed shows [shows]'''
+    def do_shows(self, query):
+        '''Show all followed shows [shows <query>]'''
         shows = self.db.get_shows()
+        if query:
+            query = query.lower()
+            shows = [s for s in shows if query in s['name'].lower()]
         shows = sorted(shows, key=lambda k: k['name'])
         shows_table = self.output.shows_table(shows)
         self.output.poutput(shows_table)
@@ -96,7 +99,7 @@ class Showtime(Cmd):
         self.pfeedback('Syncing shows...')
         shows = self.db.get_active_shows()
         for show in shows:
-            self.output.poutput('({id}) {name} - {premiered}'.format(
+            self.output.poutput('{id}\t{name} ({premiered})'.format(
                 id=show['id'], name=show['name'], premiered=show['premiered']))
             episodes = self._get_episodes(int(show['id']))
             self.db.sync_episodes(show['id'], episodes);
