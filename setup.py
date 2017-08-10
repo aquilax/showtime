@@ -1,16 +1,26 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
-    name='Showtime',
+    name='showtime-cli',
     version='0.1',
     packages=[
-        'showtime',
+        'showtime-cli',
     ],
     author = 'Evgeniy Vasilev',
     author_email = 'aquilax@gmail.com',
+    description = 'Command line show tracker using the TVMaze public API',
     url = 'https://github.com/aquilax/showtime',
-    keywords = ['tv', 'command line', 'application'],
-    license='LICENSE',
+    keywords = ['tv', 'command line', 'application', 'show', 'tvmaze'],
+    license='MIT',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Intended Audience :: End Users/Desktop',
+        'License :: OSI Approved :: MIT License',
+        'Natural Language :: English',
+        'Programming Language :: Python :: 3 :: Only',
+        'Topic :: Utilities',
+    ],
     install_requires = [
         'cmd2==0.7.5',
         'python-tvmaze==1.0.1',
@@ -21,7 +31,7 @@ setup(
     entry_points={
         'console_scripts':
         [
-            'showtime = showtime.command:main'
+            'showtime-cli = showtime.command:main'
         ]
     }
 )

@@ -1,9 +1,9 @@
 from ratelimit import rate_limited
 from cmd2 import Cmd
 from tvmaze.api import Api
-from showtime.database import Database
-from showtime.output import Output
-from showtime.config import Config
+from showtime-cli.database import Database
+from showtime-cli.output import Output
+from showtime-cli.config import Config
 
 class Showtime(Cmd):
 
@@ -11,6 +11,8 @@ class Showtime(Cmd):
             'type `help` to get help, `quit` to exit'
 
     current_show = None
+    show_ids = []
+
 
     def __init__(self, api, db, config):
         Cmd.__init__(self)
@@ -63,6 +65,7 @@ class Showtime(Cmd):
         if query:
             query = query.lower()
             shows = [s for s in shows if query in s['name'].lower()]
+        self.show_ids = [s['id'] for s in shows]
         shows = sorted(shows, key=lambda k: k['name'])
         shows_table = self.output.shows_table(shows)
         self.output.poutput(shows_table)
@@ -75,9 +78,12 @@ class Showtime(Cmd):
             self.output.perror('Show {id} not found'.format(id=show_id))
             return
         episodes = self.db.get_episodes(int(show_id))
-
+        self.episode_ids = [s['id'] for s in episodes]
         episodes_tabe = self.output.format_episodes(show, episodes)
         self.output.poutput(episodes_tabe)
+
+    def complete_episodes(self, text, line, start_index, end_index):
+        return [str(id) for id in self.show_ids if str(id).startswith(text)]
 
     def do_set_show(self, show_id):
         '''Set show in context [set_show <show_id>]'''
@@ -108,6 +114,9 @@ class Showtime(Cmd):
     def do_watch(self, episode_id):
         '''Mark episode as watched [watch <episode_id>]'''
         self.db.update_watched(int(episode_id), True)
+
+    def complete_watch(self, text, line, start_index, end_index):
+        return [str(id) for id in self.episode_ids if str(id).startswith(text)]
 
     def do_unwatch(self, episode_id):
         '''Mark episode as not watched [unwatch <episode_id>]'''
