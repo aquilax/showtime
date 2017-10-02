@@ -1,17 +1,25 @@
 from setuptools import setup
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='showtime-cli',
     version='0.1',
     packages=[
-        'showtime-cli',
+        'showtime',
     ],
     author = 'Evgeniy Vasilev',
     author_email = 'aquilax@gmail.com',
-    description = 'Command line show tracker using the TVMaze public API',
-    url = 'https://github.com/aquilax/showtime',
-    keywords = ['tv', 'command line', 'application', 'show', 'tvmaze'],
     license='MIT',
+    description = 'Command line show tracker using the TVMaze public API',
+    long_description=long_description,
+    url = 'https://github.com/aquilax/showtime',
+    keywords = 'tv commandline application show tvmaze',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -28,10 +36,13 @@ setup(
         'tinydb==3.3.1',
         'terminaltables==3.1.0',
     ],
+    extras_require={
+        'test': ['tox'],
+    },
     entry_points={
         'console_scripts':
         [
-            'showtime-cli = showtime.command:main'
+            'showtime = showtime.command:main'
         ]
     }
 )

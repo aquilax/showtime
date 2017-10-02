@@ -1,7 +1,5 @@
 from enum import Enum
 from datetime import datetime
-import os
-import json
 from tinydb import TinyDB, Query
 
 
@@ -92,14 +90,14 @@ class Database():
         Episode = Query()
         return self.episode_table.search(Episode.watched == '')
 
-    def update_watched_show(self, show_id:int, watched: bool):
+    def update_watched_show(self, show_id: int, watched: bool):
         Episode = Query()
         watched_value = datetime.utcnow().isoformat() if watched else ''
         self.episode_table.update({
             'watched': watched_value
         }, Episode.show_id == show_id)
 
-    def update_watched_show_season(self, show_id:int, season:int, watched: bool):
+    def update_watched_show_season(self, show_id: int, season: int, watched: bool):
         Episode = Query()
         watched_value = datetime.utcnow().isoformat() if watched else ''
         self.episode_table.update({
@@ -107,7 +105,7 @@ class Database():
         }, ((Episode.show_id == show_id) & (Episode.season == season)))
 
     def last_seen(self, show_id, season, number):
-        episodes = self.get_episodes(show_id);
+        episodes = self.get_episodes(show_id)
         eids = []
         for episode in episodes:
             if episode['season'] > season:

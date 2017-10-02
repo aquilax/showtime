@@ -1,9 +1,10 @@
 from ratelimit import rate_limited
 from cmd2 import Cmd
 from tvmaze.api import Api
-from showtime-cli.database import Database
-from showtime-cli.output import Output
-from showtime-cli.config import Config
+from showtime.database import Database
+from showtime.output import Output
+from showtime.config import Config
+
 
 class Showtime(Cmd):
 
@@ -12,7 +13,7 @@ class Showtime(Cmd):
 
     current_show = None
     show_ids = []
-
+    episode_ids = []
 
     def __init__(self, api, db, config):
         Cmd.__init__(self)
@@ -41,7 +42,6 @@ class Showtime(Cmd):
     def _get_episodes(self, show_id: int):
         return self.api.show.episodes(show_id)
 
-
     def do_search(self, query):
         '''Search shows [search <query>]'''
         search_result = self.api.search.shows(query)
@@ -55,9 +55,9 @@ class Showtime(Cmd):
             show = self.api.show.get(show_id)
             self.db.add(show)
             episodes = self._get_episodes(int(show.id))
-            self.db.sync_episodes(show.id, episodes);
+            self.db.sync_episodes(show.id, episodes)
             self.output.poutput('Added show: ({id}) {name} - {premiered}'.format(
-                    id=show.id, name=show.name, premiered=show.premiered))
+                id=show.id, name=show.name, premiered=show.premiered))
 
     def do_shows(self, query):
         '''Show all followed shows [shows <query>]'''
@@ -100,20 +100,21 @@ class Showtime(Cmd):
         self.current_show = None
         self.prompt = self._get_prompt()
 
-    def do_sync(self, update):
-        '''Syncronise episodes with TVMaze [sync]'''
+    def do_sync(self, _):
+        '''Synchronise episodes with TVMaze [sync]'''
         self.pfeedback('Syncing shows...')
         shows = self.db.get_active_shows()
         for show in shows:
             self.output.poutput('{id}\t{name} ({premiered})'.format(
                 id=show['id'], name=show['name'], premiered=show['premiered']))
             episodes = self._get_episodes(int(show['id']))
-            self.db.sync_episodes(show['id'], episodes);
+            self.db.sync_episodes(show['id'], episodes)
         self.pfeedback('Done')
 
-    def do_watch(self, episode_id):
-        '''Mark episode as watched [watch <episode_id>]'''
-        self.db.update_watched(int(episode_id), True)
+    def do_watch(self, episode_ids):
+        '''Mark episode as watched [watch <episode_id,...>]'''
+        for episode_id in [e.strip() for e in episode_ids.split(',')]:
+            self.db.update_watched(int(episode_id), True)
 
     def complete_watch(self, text, line, start_index, end_index):
         return [str(id) for id in self.episode_ids if str(id).startswith(text)]
@@ -157,6 +158,7 @@ class Showtime(Cmd):
         show_id, season, episode = line.split(' ')
         count = self.db.last_seen(int(show_id), int(season), int(episode))
         self.output.poutput('{count} episodes marked as seen'.format(count=count))
+
 
 def main():
     api = Api()
