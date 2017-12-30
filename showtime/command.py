@@ -1,3 +1,9 @@
+import os
+import readline
+import atexit
+import datetime
+import dateutil.parser
+
 from ratelimit import rate_limited
 from cmd2 import Cmd
 from tvmaze.api import Api
@@ -8,8 +14,8 @@ from showtime.config import Config
 
 class Showtime(Cmd):
 
-    intro = '======== SHOWTIME SHOW TRACKER ========\n' + \
-            'type `help` to get help, `quit` to exit'
+    # intro = '======== SHOWTIME SHOW TRACKER ========\n' + \
+    #         'type `help` to get help, `quit` to exit'
 
     current_show = None
     show_ids = []
@@ -33,7 +39,12 @@ class Showtime(Cmd):
 
     def _get_show_id(self, show_id: str) -> int:
         if show_id:
-            return int(show_id)
+            try:
+                return int(show_id)
+            except ValueError:
+                shows = self.search_shows(show_id)
+                if len(shows) == 1:
+                    return int(shows[0]['id'])
         if self.current_show:
             return int(self.current_show['id'])
         raise Exception('Please provide show_id')
@@ -59,14 +70,17 @@ class Showtime(Cmd):
             self.output.poutput('Added show: ({id}) {name} - {premiered}'.format(
                 id=show.id, name=show.name, premiered=show.premiered))
 
-    def do_shows(self, query):
-        '''Show all followed shows [shows <query>]'''
+    def search_shows(self, query):
         shows = self.db.get_shows()
         if query:
             query = query.lower()
             shows = [s for s in shows if query in s['name'].lower()]
         self.show_ids = [s['id'] for s in shows]
-        shows = sorted(shows, key=lambda k: k['name'])
+        return sorted(shows, key=lambda k: k['name'])
+
+    def do_shows(self, query):
+        '''Show all followed shows [shows <query>]'''
+        shows = self.search_shows(query)
         shows_table = self.output.shows_table(shows)
         self.output.poutput(shows_table)
 
@@ -101,7 +115,7 @@ class Showtime(Cmd):
         self.prompt = self._get_prompt()
 
     def do_sync(self, _):
-        '''Synchronise episodes with TVMaze [sync]'''
+        '''Synchronize episodes with TVMaze [sync]'''
         self.pfeedback('Syncing shows...')
         shows = self.db.get_active_shows()
         for show in shows:
@@ -115,6 +129,35 @@ class Showtime(Cmd):
         '''Mark episode as watched [watch <episode_id,...>]'''
         for episode_id in [e.strip() for e in episode_ids.split(',')]:
             self.db.update_watched(int(episode_id), True)
+
+    def do_next(self, show_id):
+        '''Mark next unwatched episode as watched [next <show_id>]'''
+        return self.do_watch_next(show_id)
+
+    def do_watch_next(self, show_id):
+        '''Mark next unwatched episode as watched [watch_next <show_id>]'''
+        show_id = self._get_show_id(show_id)
+        show = self.db.get_show(show_id)
+        if not show:
+            self.output.perror('Show {id} not found'.format(id=show_id))
+            return
+        episode = self.db.get_next_unwatched(show_id)
+        if episode:
+            episodes_tabe = self.output.format_episodes(show, [episode])
+            self.output.poutput(episodes_tabe)
+            response = input('Did you watch this episode [Y/n]:')
+            if response.lower() in ['y', '']:
+                self.db.update_watched(int(episode['id']), True)
+                return
+            self.pfeedback('Canceling...')
+            return
+        self.output.perror('No episodes left unwatched for `{name}`'.format(name=show['name']))
+
+    def complete_next(self, text, line, start_index, end_index):
+        return self.complete_watch_next(text, line, start_index, end_index)
+
+    def complete_watch_next(self, text, line, start_index, end_index):
+        return [str(id) for id in self.show_ids if str(id).startswith(text)]
 
     def complete_watch(self, text, line, start_index, end_index):
         return [str(id) for id in self.episode_ids if str(id).startswith(text)]
@@ -154,13 +197,34 @@ class Showtime(Cmd):
         self.output.poutput('Database path: {path}'.format(path=self.config.get('Database', 'Path')))
 
     def do_last_seen(self, line):
-        '''Mark all episodes as seen up to the defined one [last_seen show_id <season> <episode>]'''
+        '''Mark all episodes as seen up to the defined one [last_seen <show_id> <season> <episode>]'''
         show_id, season, episode = line.split(' ')
         count = self.db.last_seen(int(show_id), int(season), int(episode))
         self.output.poutput('{count} episodes marked as seen'.format(count=count))
 
+    def do_export(self, line):
+        '''Export seen episodes between dates[export <from_date> <to_date>]'''
+        from_date = datetime.date(datetime.MINYEAR, 1, 1)
+        to_date = datetime.date.today()
+        try:
+            from_date_s, to_date_s = line.split(' ')
+            from_date = dateutil.parser.parse(from_date_s).date()
+            to_date = dateutil.parser.parse(to_date_s).date()
+        except:
+            pass
+        shows = self.db.seen_between(from_date, to_date)
+        self.output.json(shows)
+
 
 def main():
+    # Persistent history
+    history_file = os.path.expanduser('~/.showtime_history')
+    if not os.path.exists(history_file):
+        with open(history_file, "w") as fobj:
+            fobj.write("")
+    readline.read_history_file(history_file)
+    atexit.register(readline.write_history_file, history_file)
+
     api = Api()
     config = Config()
     config.load_config()

@@ -13,13 +13,13 @@ setup(
     packages=[
         'showtime',
     ],
-    author = 'Evgeniy Vasilev',
-    author_email = 'aquilax@gmail.com',
+    author='Evgeniy Vasilev',
+    author_email='aquilax@gmail.com',
     license='MIT',
-    description = 'Command line show tracker using the TVMaze public API',
+    description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
-    url = 'https://github.com/aquilax/showtime',
-    keywords = 'tv commandline application show tvmaze',
+    url='https://github.com/aquilax/showtime',
+    keywords='tv commandline application show tvmaze',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -29,12 +29,13 @@ setup(
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Utilities',
     ],
-    install_requires = [
+    install_requires=[
         'cmd2==0.7.5',
         'python-tvmaze==1.0.1',
         'ratelimit==1.4.0',
         'tinydb==3.3.1',
         'terminaltables==3.1.0',
+        'python-dateutil==2.6.1',
     ],
     extras_require={
         'test': ['tox'],

@@ -1,3 +1,5 @@
+import dateutil.parser
+
 from enum import Enum
 from datetime import datetime
 from tinydb import TinyDB, Query
@@ -41,7 +43,8 @@ class Database():
 
     def get_episodes(self, show_id):
         Episode = Query()
-        return self.episode_table.search(Episode.show_id == show_id)
+        episodes = self.episode_table.search(Episode.show_id == show_id)
+        return sorted(episodes, key=lambda ep: ep['season'] * 1000 + ep['number'])
 
     def sync_episodes(self, show_id, episodes):
         exising_episodes = self.get_episodes(show_id)
@@ -65,7 +68,13 @@ class Database():
                 })
             else:
                 matched_episode = matched.pop()
-                if matched_episode['name'] != episode.name:
+                if (
+                    matched_episode['name'] != episode.name or
+                    matched_episode['airdate'] != episode.airdate or
+                    matched_episode['runtime'] != episode.runtime or
+                    matched_episode['season'] != episode.season or
+                    matched_episode['number'] != episode.number
+                ):
                     print('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
                         season=episode.season, episode=episode.number, id=episode.id,
                         name=episode.name, airdate=episode.airdate))
@@ -88,7 +97,7 @@ class Database():
 
     def get_unwatched(self):
         Episode = Query()
-        return self.episode_table.search(Episode.watched == '')
+        return self.decoreate_episodes(self.episode_table.search(Episode.watched == ''))
 
     def update_watched_show(self, show_id: int, watched: bool):
         Episode = Query()
@@ -118,3 +127,30 @@ class Database():
             'watched': watched_value
         }, eids=eids)
         return len(eids)
+
+    def get_next_unwatched(self, show_id):
+        episodes = self.get_episodes(show_id)
+        if episodes:
+            for episode in episodes:
+                if episode['watched'] == '':
+                    return episode
+        return None
+
+    def seen_between(self, from_date, to_date):
+        def test_between(d, from_date, to_date):
+            if d:
+                return from_date <= dateutil.parser.parse(d).date() <= to_date
+            return False
+
+        Episode = Query()
+        episodes = self.episode_table.search(Episode.watched.test(test_between, from_date, to_date))
+        return episodes
+
+    def decoreate_episodes(self, episodes):
+        result = []
+        shows = {show['id']: show for show in self.get_shows()}
+        for episode in episodes:
+            show = shows[episode['show_id']]
+            episode['show_name'] = show['name']
+            result.append(episode)
+        return result
