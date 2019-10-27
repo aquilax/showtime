@@ -4,12 +4,12 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
     name='showtime-cli',
-    version='0.2',
+    version='0.2.1',
     packages=[
         'showtime',
     ],
@@ -18,6 +18,7 @@ setup(
     license='MIT',
     description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/aquilax/showtime',
     keywords='tv commandline application show tvmaze',
     classifiers=[
