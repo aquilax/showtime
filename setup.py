@@ -18,7 +18,7 @@ setup(
     license='MIT',
     description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type='text/markdown',
     url='https://github.com/aquilax/showtime',
     keywords='tv commandline application show tvmaze',
     classifiers=[
