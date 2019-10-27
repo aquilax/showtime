@@ -14,9 +14,6 @@ from showtime.config import Config
 
 class Showtime(Cmd):
 
-    # intro = '======== SHOWTIME SHOW TRACKER ========\n' + \
-    #         'type `help` to get help, `quit` to exit'
-
     current_show = None
     show_ids = []
     episode_ids = []
@@ -230,7 +227,6 @@ class Showtime(Cmd):
             pass
         shows = self.db.seen_between(from_date, to_date)
         self.output.json(shows)
-
 
 def main():
     # Persistent history

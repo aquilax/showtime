@@ -55,10 +55,10 @@ class Database():
         return self.episode_table.remove(Episode.id == episode_id)
 
     def sync_episodes(self, show_id, episodes):
-        exising_episodes = self.get_episodes(show_id)
+        existing_episodes = self.get_episodes(show_id)
         queue = []
         for episode in episodes:
-            matched = [x for x in exising_episodes if x['id'] == episode.id]
+            matched = [x for x in existing_episodes if x['id'] == episode.id]
             if not matched:
                 print('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
                     season=episode.season, episode=episode.number, id=episode.id,
@@ -105,7 +105,8 @@ class Database():
 
     def get_unwatched(self):
         Episode = Query()
-        return self.decoreate_episodes(self.episode_table.search(Episode.watched == ''))
+        return self.decorate_episodes(
+            sorted(self.episode_table.search(((Episode.watched == '') & (Episode.airdate <= datetime.utcnow().isoformat()))), key=lambda episode: episode['airdate'] or ''))
 
     def update_watched_show(self, show_id: int, watched: bool):
         Episode = Query()
@@ -151,10 +152,11 @@ class Database():
             return False
 
         Episode = Query()
-        episodes = self.episode_table.search(Episode.watched.test(test_between, from_date, to_date))
+        episodes = self.episode_table.search(
+            Episode.watched.test(test_between, from_date, to_date))
         return episodes
 
-    def decoreate_episodes(self, episodes):
+    def decorate_episodes(self, episodes):
         result = []
         shows = {show['id']: show for show in self.get_shows()}
         for episode in episodes:
