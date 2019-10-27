@@ -14,9 +14,6 @@ from showtime.config import Config
 
 class Showtime(Cmd):
 
-    # intro = '======== SHOWTIME SHOW TRACKER ========\n' + \
-    #         'type `help` to get help, `quit` to exit'
-
     current_show = None
     show_ids = []
     episode_ids = []
@@ -153,6 +150,22 @@ class Showtime(Cmd):
             return
         self.output.perror('No episodes left unwatched for `{name}`'.format(name=show['name']))
 
+    def do_delete_episode(self, episode_id):
+        '''Delete episode [delete_episode <episode_id>]'''
+        episode_id = int(episode_id)
+        episode = self.db.get_episode(episode_id)
+        if episode:
+            show = self.db.get_show(episode['show_id'])
+            episodes_tabe = self.output.format_episodes(show, [episode])
+            self.output.poutput(episodes_tabe)
+            response = input('Do you want to delete this episode [y/N]:')
+            if response.lower() in ['y']:
+                self.db.delete_episode(int(episode['id']))
+                return
+            self.pfeedback('Canceling...')
+            return
+        self.output.perror('Invalid episode_id')
+
     def complete_next(self, text, line, start_index, end_index):
         return self.complete_watch_next(text, line, start_index, end_index)
 
@@ -214,7 +227,6 @@ class Showtime(Cmd):
             pass
         shows = self.db.seen_between(from_date, to_date)
         self.output.json(shows)
-
 
 def main():
     # Persistent history
