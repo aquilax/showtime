@@ -37,7 +37,7 @@ setup(
         'ratelimit==1.4.0',
         'tinydb==3.15.2',
         'terminaltables==3.1.0',
-        'python-dateutil==2.6.1',
+        'python-dateutil==2.8.1',
     ],
     extras_require={
         'test': ['tox'],
