@@ -1,5 +1,6 @@
 from setuptools import setup
 from os import path
+from showtime import __version__, __url__
 
 here = path.abspath(path.dirname(__file__))
 
@@ -9,7 +10,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='showtime-cli',
-    version='0.2.1',
+    version=__version__,
     packages=[
         'showtime',
     ],
@@ -19,10 +20,10 @@ setup(
     description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/aquilax/showtime',
+    url=__url__,
     keywords='tv commandline application show tvmaze',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: End Users/Desktop',
         'License :: OSI Approved :: MIT License',
