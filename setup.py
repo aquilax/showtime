@@ -32,7 +32,7 @@ setup(
         'Topic :: Utilities',
     ],
     install_requires=[
-        'cmd2==0.7.5',
+        'cmd2==0.9.25',
         'python-tvmaze==1.0.1',
         'ratelimit==1.4.0',
         'tinydb==3.15.2',
