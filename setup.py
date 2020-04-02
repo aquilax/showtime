@@ -23,7 +23,7 @@ setup(
     description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url=module_data['__version__'],
+    url=module_data['__url__'],
     keywords='tv commandline application show tvmaze',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
