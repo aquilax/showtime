@@ -3,9 +3,9 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-version = {}
+module_data = {}
 with open(path.join(here, "showtime", "__init__.py")) as fp:
-    exec(fp.read(), version)
+    exec(fp.read(), module_data)
 
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -13,7 +13,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='showtime-cli',
-    version=version['__version__'],
+    version=module_data['__version__'],
     packages=[
         'showtime',
     ],
@@ -23,7 +23,7 @@ setup(
     description='Command line show tracker using the TVMaze public API',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url=__url__,
+    url=module_data['__version__'],
     keywords='tv commandline application show tvmaze',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
