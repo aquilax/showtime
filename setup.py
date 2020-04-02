@@ -1,8 +1,11 @@
 from setuptools import setup
 from os import path
-from showtime import __version__, __url__
 
 here = path.abspath(path.dirname(__file__))
+
+version = {}
+with open(path.join(here, "showtime", "__init__.py")) as fp:
+    exec(fp.read(), version)
 
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -10,7 +13,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='showtime-cli',
-    version=__version__,
+    version=version['__version__'],
     packages=[
         'showtime',
     ],
