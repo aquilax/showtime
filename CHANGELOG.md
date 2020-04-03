@@ -1,4 +1,4 @@
-0.3.2
+0.3.3
 * Adds new command `new_unwatched` to show unwatched episodes in the last N days
 * Adds more type annotations
 
