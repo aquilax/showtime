@@ -8,7 +8,7 @@ class Config(ConfigParser):
         os.path.expanduser('~/.showtime.ini')
     ]
 
-    def load_config(self, file_name=''):
+    def load(self, file_name: str='') -> None :
         self.add_section('Database')
         self.set('Database', 'Path', str(os.path.join(os.getcwd(), 'showtime.json')))
         if file_name == '':

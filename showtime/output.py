@@ -71,7 +71,7 @@ class Output():
         data = []
         data.append([
             'ID',
-            'Show'
+            'Show',
             'S',
             'E',
             'Name',
