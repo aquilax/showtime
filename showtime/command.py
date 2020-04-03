@@ -29,7 +29,7 @@ class Showtime(Cmd):
         self.output = Output(self.poutput, self.perror, self.pfeedback)
         self.prompt = self._get_prompt()
 
-    def _get_prompt(self, name: str=''):
+    def _get_prompt(self, name: str = ''):
         if name:
             return '(showtime: {name}) '.format(name=name)
         return '(showtime) '
@@ -204,23 +204,23 @@ class Showtime(Cmd):
         show_id, season = query.split(' ')
         self.db.update_watched_show_season(ShowId(show_id), int(season), False)
 
-    def do_unwatched(self, _):
+    def do_unwatched(self, _) -> None:
         '''Show list of all episodes not watched yet [unwatched]'''
         episodes = self.db.get_unwatched()
         episodes_tabe = self.output.format_unwatched(episodes)
         self.output.poutput(episodes_tabe)
 
-    def do_last_seen(self, query: str):
+    def do_last_seen(self, query: str) -> None:
         '''Mark all episodes as seen up to the defined one [last_seen <show_id> <season> <episode>]'''
         show_id, season, episode = query.split(' ')
         count = self.db.last_seen(ShowId(show_id), int(season), int(episode))
         self.output.poutput('{count} episodes marked as seen'.format(count=count))
 
-    def do_config(self, _):
+    def do_config(self, _) -> None:
         '''Show current configuration [config]'''
         self.output.poutput('Database path: {path}'.format(path=self.config.get('Database', 'Path')))
 
-    def do_export(self, _):
+    def do_export(self, _) -> None:
         '''Export seen episodes between dates[export <from_date> <to_date>]'''
         from_date = datetime.date(datetime.MINYEAR, 1, 1)
         to_date = datetime.date.today()
@@ -233,7 +233,7 @@ class Showtime(Cmd):
         shows = self.db.seen_between(from_date, to_date)
         self.output.json(shows)
 
-    def do_new_unwatched(self, days):
+    def do_new_unwatched(self, days) -> None:
         '''Show unwatched episodes aired in the last 7 days[new_unwatched <days>]'''
         delta = datetime.timedelta(days=(int(days) if days else 7))
         from_date = (datetime.date.today() - delta)
@@ -242,7 +242,7 @@ class Showtime(Cmd):
         episodes_tabe = self.output.format_unwatched(sorted(shows, key=lambda k: k['airdate']))
         self.output.poutput(episodes_tabe)
 
-    def do_version(self, _):
+    def do_version(self, _) -> None:
         '''Show current version'''
         self.output.poutput(__version__)
 

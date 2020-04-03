@@ -5,6 +5,7 @@ from datetime import datetime
 from tinydb import TinyDB, Query
 from showtime.types import EpisodeId, ShowId
 
+
 class ShowStatus(Enum):
     ENDED = 'Ended'
     RUNNING = 'Running'
@@ -14,6 +15,7 @@ def _test_between(d, from_date, to_date):
     if d:
         return from_date <= dateutil.parser.parse(d).date() <= to_date
     return False
+
 
 class Database():
 
