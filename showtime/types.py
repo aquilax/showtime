@@ -1,0 +1,2 @@
+ShowId = int
+EpisodeId = int
