@@ -1,87 +1,64 @@
 import csv
 import dateutil.parser
 
-from enum import Enum
-from datetime import datetime
+from datetime import datetime, date
 from tinydb import TinyDB, Query
 from tinydb.storages import JSONStorage, MemoryStorage
 from tinydb.middlewares import CachingMiddleware
-from showtime.types import EpisodeId, ShowId
-
+from showtime.types import EpisodeId, ShowId, Episode, Show, DecoratedEpisode, TVMazeShow, TVMazeEpisode, ShowStatus
+from typing import cast, List, Union, Callable, TypeVar
 
 SHOW = 'show'
 EPISODE = 'episode'
 
-
-class ShowStatus(Enum):
-    ENDED = 'Ended'
-    RUNNING = 'Running'
-
-
-def _test_between(d, from_date, to_date):
-    if d:
-        return from_date <= dateutil.parser.parse(d).date() <= to_date
-    return False
-
+def _test_between(date: str, from_date: date, to_date: date)-> bool:
+    return from_date <= dateutil.parser.parse(date).date() <= to_date if date else False
 
 class Database(TinyDB):
 
-    db = None
-
-    def __init__(self, *args, **kwargs):
-        self.db = TinyDB(*args, **kwargs)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.db.close()
-
-    def add(self, show):
-        Show = Query()
-        if not self.db.table(SHOW).contains(Show.id == show.id):
-            self.db.table(SHOW).insert({
+    def add(self, show: TVMazeShow) -> ShowId:
+        ShowQ = Query()
+        if not self.table(SHOW).contains(ShowQ.id == show.id):
+            self.table(SHOW).insert({
                 'id': show.id,
                 'name': show.name,
                 'premiered': show.premiered,
                 'status': show.status
             })
-        return show.id
+        return ShowId(show.id)
 
-    def get_shows(self):
-        return self.db.table(SHOW).all()
+    def get_shows(self) -> List[Show]:
+        return cast(List[Show], self.table(SHOW).all())
 
-    def get_active_shows(self):
-        Show = Query()
-        return self.db.table(SHOW).search(Show.status != ShowStatus.ENDED.value)
+    def get_active_shows(self)-> List[Show]:
+        ShowQ = Query()
+        return cast(List[Show], self.table(SHOW).search(ShowQ.status != ShowStatus.ENDED.value))
 
-    def get_show(self, show_id: ShowId):
-        Show = Query()
-        return self.db.table(SHOW).get(Show.id == show_id)
+    def get_show(self, show_id: ShowId) -> Union[Show, None]:
+        ShowQ = Query()
+        return cast(Union[Show, None], self.table(SHOW).get(ShowQ.id == show_id))
 
-    def get_episode(self, episode_id: EpisodeId):
-        Episode = Query()
-        return self.db.table(EPISODE).get(Episode.id == episode_id)
+    def get_episode(self, episode_id: EpisodeId) -> Union[Episode, None]:
+        EpisodeQ = Query()
+        return cast(Union[Episode, None], self.table(EPISODE).get(EpisodeQ.id == episode_id))
 
-    def get_episodes(self, show_id: ShowId):
-        Episode = Query()
-        episodes = self.db.table(EPISODE).search(Episode.show_id == show_id)
-        return sorted(episodes, key=lambda ep: ep['season'] * 1000 + ep['number'])
+    def get_episodes(self, show_id: ShowId)-> List[Episode]:
+        EpisodeQ = Query()
+        episodes = self.table(EPISODE).search(EpisodeQ.show_id == show_id)
+        return cast(List[Episode], sorted(episodes, key=lambda ep: ep['season'] * 1000 + ep['number']))
 
-    def delete_episode(self, episode_id: EpisodeId):
-        Episode = Query()
-        return self.db.table(EPISODE).remove(Episode.id == episode_id)
+    def delete_episode(self, episode_id: EpisodeId) -> List[int]:
+        EpisodeQ = Query()
+        return cast(List[int], self.table(EPISODE).remove(EpisodeQ.id == episode_id))
 
-    def sync_episodes(self, show_id: ShowId, episodes):
+    def sync_episodes(self, show_id: ShowId, episodes: List[TVMazeEpisode], on_insert: Union[Callable[[TVMazeEpisode], None], None]=None, on_update: Union[Callable[[TVMazeEpisode], None], None]=None) -> None:
         existing_episodes = self.get_episodes(show_id)
         queue = []
         for episode in episodes:
             matched = [x for x in existing_episodes if x['id'] == episode.id]
             if not matched:
-                print('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
-                    season=episode.season, episode=episode.number, id=episode.id,
-                    name=episode.name, airdate=episode.airdate))
-
+                if on_insert:
+                    on_insert(episode)
                 queue.append({
                     'id': episode.id,
                     'show_id': show_id,
@@ -101,61 +78,60 @@ class Database(TinyDB):
                     matched_episode['season'] != episode.season or
                     matched_episode['number'] != episode.number
                 ):
-                    print('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
-                        season=episode.season, episode=episode.number, id=episode.id,
-                        name=episode.name, airdate=episode.airdate))
-                    Episode = Query()
-                    self.db.table(EPISODE).update({
+                    if on_update:
+                        on_update(episode)
+                    EpisodeQ = Query()
+                    self.table(EPISODE).update({
                         'name': episode.name,
                         'airdate': episode.airdate,
                         'runtime': episode.runtime,
                         'season': episode.season,
                         'number': episode.number,
-                    }, Episode.id == episode.id)
-        self.db.table(EPISODE).insert_multiple(queue)
+                    }, EpisodeQ.id == matched_episode['id'])
+        self.table(EPISODE).insert_multiple(queue)
 
-    def update_watched(self, episode_id: EpisodeId, watched: bool):
-        Episode = Query()
+    def update_watched(self, episode_id: EpisodeId, watched: bool) -> None:
+        EpisodeQ = Query()
         watched_value = datetime.utcnow().isoformat() if watched else ''
-        self.db.table(EPISODE).update({
+        self.table(EPISODE).update({
             'watched': watched_value
-        }, Episode.id == episode_id)
+        }, EpisodeQ.id == episode_id)
 
-    def get_unwatched(self):
-        Episode = Query()
+    def get_unwatched(self) -> List[DecoratedEpisode]:
+        EpisodeQ = Query()
         return self.decorate_episodes(
-            sorted(self.db.table(EPISODE).search(((Episode.watched == '') & (Episode.airdate <= datetime.utcnow().isoformat()))), key=lambda episode: episode['airdate'] or ''))
+            sorted(self.table(EPISODE).search(((EpisodeQ.watched == '') & (EpisodeQ.airdate <= datetime.utcnow().isoformat()))), key=lambda episode: episode['airdate'] or ''))
 
-    def update_watched_show(self, show_id: ShowId, watched: bool):
-        Episode = Query()
+    def update_watched_show(self, show_id: ShowId, watched: bool) -> None:
+        EpisodeQ = Query()
         watched_value = datetime.utcnow().isoformat() if watched else ''
-        self.db.table(EPISODE).update({
+        self.table(EPISODE).update({
             'watched': watched_value
-        }, Episode.show_id == show_id)
+        }, EpisodeQ.show_id == show_id)
 
-    def update_watched_show_season(self, show_id: ShowId, season: int, watched: bool):
-        Episode = Query()
+    def update_watched_show_season(self, show_id: ShowId, season: int, watched: bool) -> None:
+        EpisodeQ = Query()
         watched_value = datetime.utcnow().isoformat() if watched else ''
-        self.db.table(EPISODE).update({
+        self.table(EPISODE).update({
             'watched': watched_value
-        }, ((Episode.show_id == show_id) & (Episode.season == season)))
+        }, ((EpisodeQ.show_id == show_id) & (EpisodeQ.season == season)))
 
-    def last_seen(self, show_id: ShowId, season, number):
+    def last_seen(self, show_id: ShowId, season: int, number: int) -> int:
         episodes = self.get_episodes(show_id)
         eids = []
         for episode in episodes:
             if episode['season'] > season:
                 continue
             if episode['season'] < season or (episode['season'] == season and episode['number'] < number):
-                eids.append(episode.eid)
+                eids.append(episode['id'])
                 continue
         watched_value = datetime.utcnow().isoformat()
-        self.db.table(EPISODE).update({
+        self.table(EPISODE).update({
             'watched': watched_value
         }, eids=eids)
         return len(eids)
 
-    def get_next_unwatched(self, show_id: ShowId):
+    def get_next_unwatched(self, show_id: ShowId)-> Union[Episode, None]:
         episodes = self.get_episodes(show_id)
         if episodes:
             for episode in episodes:
@@ -163,42 +139,43 @@ class Database(TinyDB):
                     return episode
         return None
 
-    def seen_between(self, from_date, to_date):
-        Episode = Query()
-        episodes = self.db.table(EPISODE).search(
-            Episode.watched.test(_test_between, from_date, to_date))
-        return episodes
+    def seen_between(self, from_date: date, to_date: date) -> List[Episode]:
+        EpisodeQ = Query()
+        episodes = self.table(EPISODE).search(
+            EpisodeQ.watched.test(_test_between, from_date, to_date))
+        return cast(List[Episode], episodes)
 
-    def aired_unseen_between(self, from_date, to_date):
-        Episode = Query()
-        episodes = self.db.table(EPISODE).search(
-            (Episode.airdate.test(_test_between, from_date, to_date)) &
-            (Episode.watched == ''))
+    def aired_unseen_between(self, from_date: date, to_date: date) -> List[DecoratedEpisode]:
+        EpisodeQ = Query()
+        episodes = self.table(EPISODE).search(
+            (EpisodeQ.airdate.test(_test_between, from_date, to_date)) &
+            (EpisodeQ.watched == ''))
         return self.decorate_episodes(episodes)
 
-    def decorate_episodes(self, episodes):
-        result = []
+    def decorate_episodes(self, episodes: List[Episode]) -> List[DecoratedEpisode]:
+        result: List[DecoratedEpisode] = []
         shows = {show['id']: show for show in self.get_shows()}
         for episode in episodes:
+            decorated_episode = cast(DecoratedEpisode, episode)
             show = shows[episode['show_id']]
-            episode['show_name'] = show['name']
-            result.append(episode)
+            decorated_episode['show_name'] = show['name']
+            result.append(decorated_episode)
         return result
 
-    def update_watch_times(self, patch_file_name):
-        Episode = Query()
-        with open(patch_file_name, newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
+    def update_watch_times(self, patch_file_name: str)-> None:
+        EpisodeQ = Query()
+        with open(patch_file_name, newline='') as csv_file:
+            reader = csv.reader(csv_file, delimiter=',')
             for row in reader:
-                self.db.table(EPISODE).update({
+                self.table(EPISODE).update({
                     'watched': row[1]
-                }, Episode.id == int(row[0]))
-                print(row[0])
-        self.db.close()
+                }, EpisodeQ.id == int(row[0]))
+        self.close()
 
-    def get_watched_episodes(self):
-        Episode = Query()
-        return self.db.table(EPISODE).search(Episode.watched != '')
+    def get_watched_episodes(self) -> List[Episode]:
+        EpisodeQ = Query()
+        return cast(List[Episode], self.table(EPISODE).search(EpisodeQ.watched != ''))
+
 
 def getDirectWriteDB(file_name: str) -> Database:
     return Database(file_name, sort_keys=True, indent=4)

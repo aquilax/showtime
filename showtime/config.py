@@ -11,6 +11,8 @@ class Config(ConfigParser):
     def load(self, file_name: str = '') -> None:
         self.add_section('Database')
         self.set('Database', 'Path', str(os.path.join(os.getcwd(), 'showtime.json')))
+        self.add_section('History')
+        self.set('History', 'Path', str(os.path.expanduser('~/.showtime_history')))
         if file_name == '':
             for location in self.common_locatons:
                 if os.path.exists(location):

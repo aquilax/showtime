@@ -1,12 +1,13 @@
 import pytest
 from collections import namedtuple
-from showtime.database import getMemoryDB, ShowStatus
+from showtime.database import getMemoryDB
+from showtime.types import ShowStatus, TVMazeShow
 
-Show = namedtuple('Show', ['id', 'name', 'premiered', 'status'])
-
+def get_tv_maze_show(id=1, name="show", premiered="2020", status="great", url="http://example.com") -> TVMazeShow:
+    return TVMazeShow(id=id, name=name, premiered=premiered, status=status, url=url)
 
 def test_add():
-    show = Show(id=1, name="show", premiered="2020", status="great")
+    show = get_tv_maze_show()
     with getMemoryDB() as db:
         addId = db.add(show)
 
@@ -14,7 +15,7 @@ def test_add():
 
 
 def test_get_shows():
-    show = Show(id=1, name="show", premiered="2020", status="great")
+    show = get_tv_maze_show()
     with getMemoryDB() as db:
         db.add(show)
         shows = db.get_shows()
@@ -23,9 +24,8 @@ def test_get_shows():
 
 
 def test_get_active_shows():
-    show1 = Show(id=1, name="show 1", premiered="2020", status="great")
-    show2 = Show(id=2, name="show 2", premiered="2020",
-                 status=ShowStatus.ENDED.value)
+    show1 = get_tv_maze_show(name="show 1")
+    show2 = get_tv_maze_show(id=2, name="show 2", status=ShowStatus.ENDED.value)
     with getMemoryDB() as db:
         db.add(show1)
         db.add(show2)
