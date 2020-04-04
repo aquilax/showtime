@@ -1,5 +1,5 @@
 import json
-from terminaltables import SingleTable as Table
+from terminaltables import AsciiTable as Table
 
 
 class Output():

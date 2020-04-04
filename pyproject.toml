@@ -7,3 +7,10 @@ max-line-length = 120
 
 [tool.autopep8]
 max_line_length = 120
+
+[tool.tox]
+legacy_tox_ini = """
+[testenv]
+deps = pytest
+commands = pytest
+"""
