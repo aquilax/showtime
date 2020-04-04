@@ -196,6 +196,9 @@ class Database(TinyDB):
                 print(row[0])
         self.db.close()
 
+    def get_watched_episodes(self):
+        Episode = Query()
+        return self.db.table(EPISODE).search(Episode.watched != '')
 
 def getDirectWriteDB(file_name: str) -> Database:
     return Database(file_name, sort_keys=True, indent=4)

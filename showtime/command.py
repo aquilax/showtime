@@ -4,6 +4,7 @@ import datetime
 import dateutil.parser
 import cmd2
 
+from functools import reduce
 from showtime.types import EpisodeId, ShowId
 from . import __version__
 from ratelimit import limits, sleep_and_retry
@@ -103,7 +104,7 @@ class Showtime(Cmd):
         if not show:
             self.output.perror('Show {id} not found'.format(id=show_id))
             return
-        episodes = self.db.get_episodes(int(show_id))
+        episodes = self.db.get_episodes(ShowId(show_id))
         self._episode_ids = [s['id'] for s in episodes]
         episodes_tabe = self.output.format_episodes(show, episodes)
         self.output.poutput(episodes_tabe)
@@ -276,10 +277,26 @@ class Showtime(Cmd):
         '''Show current version'''
         self.output.poutput(__version__)
 
-    def do_patch_watchtime(self, file_name: str):
+    def do_patch_watchtime(self, file_name: str) -> None:
         with getCashedWriteDB(self.config.get('Database', 'Path')) as cached_db:
             cached_db.update_watch_times(file_name)
 
+    def do_watching_stats(self, _) -> None:
+        watched = self.db.get_watched_episodes()
+        minutes = reduce((lambda acc, ep: acc + ep['runtime'] if ep['runtime'] else 0), watched, 0)
+
+        def month_groupper(acc, ep):
+            date = ep['watched'][0:7]
+            if not date in acc:
+                acc[date] = 0
+            acc[date] = acc[date] + 1
+            return acc
+
+        month_totals = reduce(month_groupper, watched, {});
+        self.output.poutput("Total watched episodes: {count}".format(count=len(watched)));
+        self.output.poutput("Total watchtime in minutes: {minutes}".format(minutes=minutes));
+        summary_table = self.output.summary_table(month_totals)
+        self.output.poutput(summary_table)
 
 def main() -> None:
     api = Api()

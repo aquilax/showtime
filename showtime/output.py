@@ -108,3 +108,19 @@ class Output():
             ])
         title = 'Followed shows'
         return Table(data, title=title).table
+
+    def summary_table(self, month_totals):
+        data = []
+        data.append([
+            'Month',
+            'Episodes',
+        ])
+        for date in sorted (month_totals.keys()):
+            data.append([
+                date,
+                month_totals[date]
+            ])
+        title = 'Episodes per month'
+        table = Table(data, title=title)
+        table.justify_columns[1] = 'right'
+        return table.table
