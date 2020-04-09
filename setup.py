@@ -35,7 +35,7 @@ setup(
         'Topic :: Utilities',
     ],
     install_requires=[
-        'six==1.10.0',
+        'six==1.14.0',
         'cmd2==1.0.2',
         'python-tvmaze==1.0.1',
         'ratelimit==2.2.1',
