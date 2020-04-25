@@ -13,4 +13,20 @@ legacy_tox_ini = """
 [testenv]
 deps = pytest
 commands = pytest
+[testenv:doc]
+deps = interrogate
+skip_install = true
+commands = interrogate --quiet --fail-under 80 showtime tests
 """
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-module = false
+fail-under = 95
+exclude = ["setup.py", "docs"]
+verbose = 0
+quiet = false
