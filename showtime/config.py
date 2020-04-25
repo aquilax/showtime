@@ -1,14 +1,18 @@
+"""Showtime Configuration"""
+
 import os
 from configparser import ConfigParser
 
 
 class Config(ConfigParser):
+    """Configuration class"""
 
     common_locatons = [
         os.path.expanduser('~/.showtime.ini')
     ]
 
     def load(self, file_name: str = '') -> None:
+        """Loads configuration file"""
         self.add_section('Database')
         self.set('Database', 'Path', str(os.path.join(os.getcwd(), 'showtime.json')))
         self.add_section('History')

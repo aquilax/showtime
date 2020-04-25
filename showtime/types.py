@@ -9,6 +9,7 @@ Date = str
 
 
 class TVMazeShow(NamedTuple):
+    """API Show result"""
     id: int
     name: str
     premiered: str
@@ -16,6 +17,7 @@ class TVMazeShow(NamedTuple):
     url: str
 
 class TVMazeEpisode(NamedTuple):
+    """API Episode result"""
     id: int
     season: int
     number: int
@@ -25,6 +27,7 @@ class TVMazeEpisode(NamedTuple):
 
 
 class ShowStatus(Enum):
+    """API Show status"""
     ENDED = 'Ended'
     RUNNING = 'Running'
     IN_DEVELOPMENT = 'In Development'
@@ -32,6 +35,7 @@ class ShowStatus(Enum):
 
 
 class Show(TypedDict):
+    """DB Show"""
     id: ShowId
     name: str
     premiered: Date
@@ -39,6 +43,7 @@ class Show(TypedDict):
 
 
 class Episode(TypedDict):
+    """DB Episode"""
     id: EpisodeId
     show_id: ShowId
     season: int
@@ -50,4 +55,5 @@ class Episode(TypedDict):
 
 
 class DecoratedEpisode(Episode):
+    """Decorated Episode"""
     show_name: str

@@ -6,6 +6,7 @@ from showtime.types import TVMazeEpisode, TVMazeShow, Episode, DecoratedEpisode,
 PrintFunction = Callable[[str], None]
 
 class Output():
+    """Output handler"""
 
     def __init__(self, print_function: PrintFunction, error_function: PrintFunction, feedback_function: PrintFunction) -> None:
         self.print_function = print_function
@@ -13,28 +14,35 @@ class Output():
         self.feedback_function = feedback_function
 
     def poutput(self, str: str) -> None:
+        """Outputs a string"""
         self.print_function(str)
 
     def json(self, data: List[Episode]) -> None:
+        """Outputs json"""
         self.print_function(json.dumps(data, sort_keys=True, indent=4))
 
     def perror(self, str: str) -> None:
+        """Outputs an error message"""
         self.error_function(str)
 
     def pfeedback(self, str: str) -> None:
+        """Outputs a feedback message"""
         self.feedback_function(str)
 
     def status_on_insert(self, episode: TVMazeEpisode) -> None:
+        """Prints status messsage when new episode is added"""
         self.poutput('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
             season=episode.season, episode=episode.number, id=episode.id,
             name=episode.name, airdate=episode.airdate))
 
     def status_on_update(self, episode: TVMazeEpisode) -> None:
+        """Prints status messsage when an episode is updated"""
         self.poutput('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
             season=episode.season, episode=episode.number, id=episode.id,
             name=episode.name, airdate=episode.airdate))
 
     def format_search_results(self, search_result: List[TVMazeShow]) -> str:
+        """Formats as table API search results"""
         data = []
         data.append([
             'ID',
@@ -54,12 +62,14 @@ class Output():
         return str(Table(data, title='Search Results').table)
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
+        """Formats as table list of episodes"""
         title = '({id}) {name} - {premiered}'.format(
                 id=show['id'], name=show['name'], premiered=show['premiered'])
-        data = self.get_episodes_data(episodes)
+        data = self._get_episodes_data(episodes)
         return str(Table(data, title=title).table)
 
-    def get_episodes_data(self, episodes: List[Episode]) -> List[List[str]]:
+    def _get_episodes_data(self, episodes: List[Episode]) -> List[List[str]]:
+        """Formats episodes as table list"""
         data = []
         data.append([
             'ID',
@@ -81,6 +91,7 @@ class Output():
         return data
 
     def format_unwatched(self, episodes: List[DecoratedEpisode]) -> str:
+        """Formats unwatched episodes as table"""
         data = []
         data.append([
             'ID',
@@ -105,6 +116,7 @@ class Output():
         return str(Table(data, title=title).table)
 
     def shows_table(self, shows: List[Show]) -> str:
+        """formats list of shows as a table"""
         data = []
         data.append([
             'ID',
@@ -123,6 +135,7 @@ class Output():
         return str(Table(data, title=title).table)
 
     def summary_table(self, month_totals: Dict[str, int]) -> str:
+        """Formats summary as a table"""
         data = []
         data.append([
             'Month',

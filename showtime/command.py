@@ -21,12 +21,14 @@ EPISODE_CATEGORY = 'Episode management'
 
 
 class Showtime(Cmd):
+    """Showtime app"""
 
     current_show = None
     _show_ids: List[ShowId] = []
     _episode_ids: List[EpisodeId] = []
 
     def __init__(self, api: Api, db: Database, config: Config) -> None:
+        """Inits Showtime"""
         Cmd.__init__(
             self, persistent_history_file=config.get('History', 'Path'))
         self.api = api
@@ -36,14 +38,17 @@ class Showtime(Cmd):
         self.prompt = self._get_prompt()
 
     def _get_prompt(self, name: str = '') -> str:
+        """Changes the prompt"""
         if name:
             return '(showtime: {name}) '.format(name=name)
         return '(showtime) '
 
     def _get_list(self, ids: str) -> List[ShowId]:
+        """Returns list from comma separated values"""
         return [ShowId(x) for x in ids.split(',')]
 
     def _search_shows(self, query: str) -> List[Show]:
+        """Searches shows using the API"""
         shows = self.db.get_shows()
         if query:
             query = query.lower()
@@ -52,6 +57,7 @@ class Showtime(Cmd):
         return sorted(shows, key=lambda k: k['name'])
 
     def _get_show_id(self, query: str) -> ShowId:
+        """Tries to get show_id from user input"""
         if query:
             try:
                 return ShowId(query)
@@ -68,6 +74,7 @@ class Showtime(Cmd):
     @sleep_and_retry
     @limits(calls=20, period=10)
     def _get_episodes(self, show_id: ShowId) -> List[TVMazeEpisode]:
+        """Downloads show information from API"""
         return cast(List[TVMazeEpisode], self.api.show.episodes(show_id))
 
     def complete_next(self, text: str, line: int, start_index: int, end_index: int) -> List[str]:
@@ -84,14 +91,14 @@ class Showtime(Cmd):
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_search(self, statement: Statement) -> None:
-        '''Search shows [search <query>]'''
+        """Search shows [search <query>]"""
         search_result = self.api.search.shows(statement)
         search_result_table = self.output.format_search_results(search_result)
         self.output.poutput(search_result_table)
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_follow(self, statement: Statement) -> None:
-        '''Follow show(s) by id [follow <show_id>[,<show_id>...]]'''
+        """Follow show(s) by id [follow <show_id>[,<show_id>...]]"""
         show_ids = self._get_list(statement)
 
         for show_id in show_ids:
@@ -107,14 +114,14 @@ class Showtime(Cmd):
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_shows(self, query: Statement) -> None:
-        '''Show all followed shows [shows <query>]'''
+        """Show all followed shows [shows <query>]"""
         shows = self._search_shows(query)
         shows_table = self.output.shows_table(shows)
         self.output.poutput(shows_table)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_episodes(self, query: Statement) -> None:
-        '''Show all episodes for a show [episodes <show_id>]'''
+        """Show all episodes for a show [episodes <show_id>]"""
         show_id = self._get_show_id(query)
         show = self.db.get_show(show_id)
         if not show:
@@ -127,7 +134,7 @@ class Showtime(Cmd):
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_set_show(self, statement: Statement) -> None:
-        '''Set show in context [set_show <show_id>]'''
+        """Set show in context [set_show <show_id>]"""
         show_id = self._get_show_id(statement)
         show = self.db.get_show(show_id)
         if not show:
@@ -138,13 +145,13 @@ class Showtime(Cmd):
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_unset_show(self, _: Statement) -> None:
-        '''Remove show from the context [unset_show]'''
+        """Remove show from the context [unset_show]"""
         self.current_show = None
         self.prompt = self._get_prompt()
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_sync(self, _: Statement) -> None:
-        '''Synchronize episodes with TVMaze [sync]'''
+        """Synchronize episodes with TVMaze [sync]"""
         self.output.pfeedback('Syncing shows...')
         with getCashedWriteDB(self.config.get('Database', 'Path')) as cached_db:
             shows = cached_db.get_active_shows()
@@ -158,18 +165,18 @@ class Showtime(Cmd):
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch(self, statement: Statement) -> None:
-        '''Mark episode as watched [watch <episode_id,...>]'''
+        """Mark episode as watched [watch <episode_id,...>]"""
         for episode_id in [e.strip() for e in statement.split(',')]:
             self.db.update_watched(int(episode_id), True)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_next(self, statement: Statement) -> None:
-        '''Mark next unwatched episode as watched [next <show_id>]'''
+        """Mark next unwatched episode as watched [next <show_id>]"""
         self.do_watch_next(statement)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_next(self, statement: Statement) -> None:
-        '''Mark next unwatched episode as watched [watch_next <show_id>]'''
+        """Mark next unwatched episode as watched [watch_next <show_id>]"""
         show_id = self._get_show_id(statement)
         show = self.db.get_show(show_id)
         if not show:
@@ -190,7 +197,7 @@ class Showtime(Cmd):
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_delete_episode(self, statement: Statement) -> None:
-        '''Delete episode [delete_episode <episode_id>]'''
+        """Delete episode [delete_episode <episode_id>]"""
         episode_id = EpisodeId(statement)
         episode = self.db.get_episode(episode_id)
         if episode:
@@ -207,55 +214,55 @@ class Showtime(Cmd):
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch(self, statement: Statement) -> None:
-        '''Mark episode as not watched [unwatch <episode_id>]'''
+        """Mark episode as not watched [unwatch <episode_id>]"""
         self.db.update_watched(EpisodeId(statement), False)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all(self, statement: Statement) -> None:
-        '''Mark all episodes in a show as watched [watch_all <show_id>]'''
+        """Mark all episodes in a show as watched [watch_all <show_id>]"""
         show_id = self._get_show_id(statement)
         self.db.update_watched_show(show_id, True)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch_all(self, statement: Statement) -> None:
-        '''Mark all episodes in a show as not watched [unwatch_all <show_id>]'''
+        """Mark all episodes in a show as not watched [unwatch_all <show_id>]"""
         show_id = self._get_show_id(statement)
         self.db.update_watched_show(show_id, False)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all_season(self, statement: Statement) -> None:
-        '''Mark all episodes in a show and season as watched [watch_all_season <show_id> <season>]'''
+        """Mark all episodes in a show and season as watched [watch_all_season <show_id> <season>]"""
         show_id, season = statement.split(' ')
         self.db.update_watched_show_season(ShowId(show_id), int(season), True)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch_all_season(self, statement: Statement) -> None:
-        '''Mark all episodes in a show and season as not watched [unwatch_all_season <show_id> <season>]'''
+        """Mark all episodes in a show and season as not watched [unwatch_all_season <show_id> <season>]"""
         show_id, season = statement.split(' ')
         self.db.update_watched_show_season(ShowId(show_id), int(season), False)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatched(self, _: Statement) -> None:
-        '''Show list of all episodes not watched yet [unwatched]'''
+        """Show list of all episodes not watched yet [unwatched]"""
         episodes = self.db.get_unwatched()
         episodes_tabe = self.output.format_unwatched(episodes)
         self.output.poutput(episodes_tabe)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_last_seen(self, statement: Statement) -> None:
-        '''Mark all episodes as seen up to the defined one [last_seen <show_id> <season> <episode>]'''
+        """Mark all episodes as seen up to the defined one [last_seen <show_id> <season> <episode>]"""
         show_id, season, episode = statement.split(' ')
         count = self.db.last_seen(ShowId(show_id), int(season), int(episode))
         self.output.poutput(
             '{count} episodes marked as seen'.format(count=count))
 
     def do_config(self, _: Statement) -> None:
-        '''Show current configuration [config]'''
+        """Show current configuration [config]"""
         self.output.poutput('Database path: {path}'.format(
             path=self.config.get('Database', 'Path')))
 
     def do_export(self, statement: Statement) -> None:
-        '''Export seen episodes between dates[export <from_date> <to_date>]'''
+        """Export seen episodes between dates[export <from_date> <to_date>]"""
         from_date = datetime.date(datetime.MINYEAR, 1, 1)
         to_date = datetime.date.today()
         try:
@@ -269,7 +276,7 @@ class Showtime(Cmd):
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_new_unwatched(self, statement: Statement) -> None:
-        '''Show unwatched episodes aired in the last 7 days[new_unwatched <days>]'''
+        """Show unwatched episodes aired in the last 7 days[new_unwatched <days>]"""
         delta = datetime.timedelta(days=(int(statement) if statement else 7) - 1)
         from_date = (datetime.date.today() - delta)
         to_date = datetime.date.today()
@@ -279,21 +286,22 @@ class Showtime(Cmd):
         self.output.poutput(episodes_tabe)
 
     def do_version(self, _: Statement) -> None:
-        '''Show current version'''
+        """Show current version"""
         self.output.poutput(__version__)
 
     def do_patch_watchtime(self, file_name: Statement) -> None:
-        '''Update watchtimes from csv file'''
+        """Update watchtimes from csv file"""
         with getCashedWriteDB(self.config.get('Database', 'Path')) as cached_db:
             cached_db.update_watch_times(file_name)
 
     def do_watching_stats(self, _: Statement) -> None:
-        '''Statistics about watchtime'''
+        """Statistics about watchtime"""
         watched = self.db.get_watched_episodes()
         minutes = reduce(
             (lambda acc, ep: acc + ep['runtime'] if ep['runtime'] else 0), watched, 0)
 
         def month_groupper(acc: Dict[str, int], ep: Episode) -> Dict[str, int]:
+            """Groups watched episodes byt month"""
             date = ep['watched'][0:7]
             if not date in acc:
                 acc[date] = 0
