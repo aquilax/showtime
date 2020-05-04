@@ -65,7 +65,7 @@ class Showtime(Cmd):
                 shows = self._search_shows(query)
                 if len(shows) == 1:
                     return ShowId(shows[0]['id'])
-                else:
+                else if len(shows) > 1:
                     return ShowId(self.select([(show['id'], show['name']) for show in shows], 'Please select one:'))
         if self.current_show:
             return ShowId(self.current_show['id'])
