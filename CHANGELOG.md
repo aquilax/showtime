@@ -1,3 +1,6 @@
+0.3.8
+* Maintenance updates
+
 0.3.4
 * Adds all type annotations
 * Small bugfixes
