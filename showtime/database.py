@@ -32,6 +32,21 @@ class Database(TinyDB):
             })
         return ShowId(show.id)
 
+    def add_episode(self, show_id: ShowId, episode: TVMazeEpisode) -> EpisodeId:
+        """Helper method used in tests"""
+        self.table(EPISODE).insert({
+            'id': episode.id,
+            'show_id': show_id,
+            'season': episode.season,
+            'number': episode.number,
+            'name': episode.name,
+            'airdate': episode.airdate,
+            'runtime': episode.runtime,
+            'watched': ''
+        })
+        return EpisodeId(episode.id)
+
+
     def get_shows(self) -> List[Show]:
         """Returns list of all addded shows"""
         return cast(List[Show], self.table(SHOW).all())
@@ -63,7 +78,7 @@ class Database(TinyDB):
         return cast(List[int], self.table(EPISODE).remove(EpisodeQ.id == episode_id))
 
     def sync_episodes(self, show_id: ShowId, episodes: List[TVMazeEpisode], on_insert: Union[Callable[[TVMazeEpisode], None], None]=None, on_update: Union[Callable[[TVMazeEpisode], None], None]=None) -> None:
-        """Updates episodes fro API reuslts"""
+        """Updates episodes from API reuslts"""
         existing_episodes = self.get_episodes(show_id)
         queue = []
         for episode in episodes:
@@ -135,18 +150,19 @@ class Database(TinyDB):
     def last_seen(self, show_id: ShowId, season: int, number: int) -> int:
         """Updates all show episodes as seen up to season and number"""
         episodes = self.get_episodes(show_id)
-        eids = []
+        episode_ids = []
         for episode in episodes:
             if episode['season'] > season:
                 continue
-            if episode['season'] < season or (episode['season'] == season and episode['number'] < number):
-                eids.append(episode['id'])
+            if episode['season'] < season or (episode['season'] == season and episode['number'] <= number):
+                episode_ids.append(episode['id'])
                 continue
         watched_value = datetime.utcnow().isoformat()
+        EpisodeQ = Query()
         self.table(EPISODE).update({
             'watched': watched_value
-        }, eids=eids)
-        return len(eids)
+        }, EpisodeQ.id.one_of(episode_ids))
+        return len(episode_ids)
 
     def get_next_unwatched(self, show_id: ShowId)-> Union[Episode, None]:
         """Returns the first episode from a show that has not been watched"""
