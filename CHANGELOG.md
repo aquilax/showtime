@@ -1,3 +1,7 @@
+0.3.9
+* fixes last_seen
+* updates cmd2 and tinydb to latest
+
 0.3.8
 * Maintenance updates
 
