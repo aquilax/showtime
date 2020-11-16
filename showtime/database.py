@@ -128,8 +128,8 @@ class Database(TinyDB):
     def get_unwatched(self) -> List[DecoratedEpisode]:
         """Returns all aired episodes which are not watched yet"""
         EpisodeQ = Query()
-        return self.decorate_episodes(
-            sorted(self.table(EPISODE).search(((EpisodeQ.watched == '') & (EpisodeQ.airdate <= datetime.utcnow().isoformat()))), key=lambda episode: episode['airdate'] or ''))
+        episodes = cast(List[Episode], sorted(self.table(EPISODE).search(((EpisodeQ.watched == '') & (EpisodeQ.airdate <= datetime.utcnow().isoformat()))), key=lambda episode: episode['airdate'] or ''))
+        return self.decorate_episodes(episodes)
 
     def update_watched_show(self, show_id: ShowId, watched: bool) -> None:
         """Updates all episodes of a show as watched now"""
@@ -183,9 +183,9 @@ class Database(TinyDB):
     def aired_unseen_between(self, from_date: date, to_date: date) -> List[DecoratedEpisode]:
         """Returns list of episodes that were aired but have not been seen between two dates"""
         EpisodeQ = Query()
-        episodes = self.table(EPISODE).search(
+        episodes = cast(List[Episode], self.table(EPISODE).search(
             (EpisodeQ.airdate.test(_test_between, from_date, to_date)) &
-            (EpisodeQ.watched == ''))
+            (EpisodeQ.watched == '')))
         return self.decorate_episodes(episodes)
 
     def decorate_episodes(self, episodes: List[Episode]) -> List[DecoratedEpisode]:
