@@ -129,8 +129,8 @@ class Showtime(Cmd):
             return
         episodes = self.db.get_episodes(ShowId(show_id))
         self._episode_ids = [s['id'] for s in episodes]
-        episodes_tabe = self.output.format_episodes(show, episodes)
-        self.output.poutput(episodes_tabe)
+        episodes_table = self.output.format_episodes(show, episodes)
+        self.output.poutput(episodes_table)
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_set_show(self, statement: Statement) -> None:
@@ -148,6 +148,12 @@ class Showtime(Cmd):
         """Remove show from the context [unset_show]"""
         self.current_show = None
         self.prompt = self._get_prompt()
+
+    @cmd2.with_category(SHOW_CATEGORY)
+    def do_completed(self, _: Statement) -> None:
+        shows = self.db.get_completed_shows();
+        completed_shows_table = self.output.completed_shows_table(shows)
+        self.output.poutput(completed_shows_table)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_sync(self, _: Statement) -> None:

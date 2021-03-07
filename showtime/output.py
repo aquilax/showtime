@@ -134,6 +134,25 @@ class Output():
         title = 'Followed shows'
         return str(Table(data, title=title).table)
 
+    def completed_shows_table(self, shows: List[Show]) -> str:
+        """formats list of completed shows as a table"""
+        data = []
+        data.append([
+            'ID',
+            'Name',
+            'Premiered',
+            'Status'
+        ])
+        for show in shows:
+            data.append([
+                str(show['id']),
+                show['name'],
+                show['premiered'],
+                show['status'],
+            ])
+        title = 'Completed shows'
+        return str(Table(data, title=title).table)
+
     def summary_table(self, month_totals: Dict[str, int]) -> str:
         """Formats summary as a table"""
         data = []

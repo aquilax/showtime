@@ -215,6 +215,29 @@ class Database(TinyDB):
         EpisodeQ = Query()
         return cast(List[Episode], self.table(EPISODE).search(EpisodeQ.watched != ''))
 
+    def get_completed_shows(self) -> List[Show]:
+        """Returns all shows that have been completed"""
+        completed: Set[ShowId] = set()
+        partial: Set[ShowId] = set()
+        last_watched: Dict[ShowId, string] = {}
+        for episode in self.table(EPISODE):
+            show_id = episode['show_id']
+            if show_id in partial:
+                continue
+            if episode['watched'] == '':
+                partial.add(show_id)
+                if show_id in completed:
+                    completed.remove(show_id)
+                continue
+            if (not show_id in last_watched) or (last_watched[show_id] < episode['watched']):
+                last_watched[show_id] = episode['watched'];
+
+            completed.add(show_id)
+        sorted_watched = sorted(last_watched, key=last_watched.get)
+        ShowQ = Query()
+        shows = cast(List[Show], self.table(SHOW).search(ShowQ.id.one_of(completed)))
+        return sorted(shows, key=lambda row: sorted_watched.index(row['id']))
+
 
 def getDirectWriteDB(file_name: str) -> Database:
     """Returns database instance with direct interface"""
