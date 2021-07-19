@@ -40,7 +40,7 @@ setup(
         'ratelimit==2.2.1',
         'tinydb==4.5.1',
         'terminaltables==3.1.0',
-        'python-dateutil==2.8.1',
+        'python-dateutil==2.8.2',
         'typing-extensions==3.10.0.0',
     ],
     extras_require={
