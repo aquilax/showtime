@@ -38,7 +38,7 @@ setup(
         'cmd2==2.1.1',
         'python-tvmaze==1.0.1',
         'ratelimit==2.2.1',
-        'tinydb==4.5.0',
+        'tinydb==4.5.1',
         'terminaltables==3.1.0',
         'python-dateutil==2.8.1',
         'typing-extensions==3.10.0.0',
