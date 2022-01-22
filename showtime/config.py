@@ -7,7 +7,7 @@ from configparser import ConfigParser
 class Config(ConfigParser):
     """Configuration class"""
 
-    common_locatons = [
+    common_locations = [
         os.path.expanduser('~/.showtime.ini')
     ]
 
@@ -18,7 +18,7 @@ class Config(ConfigParser):
         self.add_section('History')
         self.set('History', 'Path', str(os.path.expanduser('~/.showtime_history')))
         if file_name == '':
-            for location in self.common_locatons:
+            for location in self.common_locations:
                 if os.path.exists(location):
                     file_name = location
 

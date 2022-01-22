@@ -2,7 +2,13 @@
 requires = ["setuptools>=40.8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.pylint]
+[tool.flakehell]
+exclude = ["README.md"]
+format = "colored"
+max_line_length = 120
+show_source = true
+
+[tool.pylint.format]
 max-line-length = 120
 
 [tool.autopep8]
@@ -10,9 +16,22 @@ max_line_length = 120
 
 [tool.tox]
 legacy_tox_ini = """
+[tox]
+envlist = py39,mypy,doc
 [testenv]
-deps = pytest
-commands = pytest
+deps =
+    pytest
+    pytest-cov
+    cmd2_ext_test
+commands = pytest --cov=showtime
+[testenv:mypy]
+deps =
+    mypy
+    ratelimit-stubs
+    types-python-dateutil
+    types-requests
+    types-urllib3
+commands = mypy -p showtime
 [testenv:doc]
 deps = interrogate
 skip_install = true
@@ -30,3 +49,7 @@ fail-under = 95
 exclude = ["setup.py", "docs"]
 verbose = 0
 quiet = false
+
+
+[tool.mypy]
+plugins = "tinydb.mypy_plugin"
