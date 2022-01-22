@@ -3,7 +3,7 @@
 import datetime
 import sys
 from functools import reduce
-from typing import Dict, List, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import cmd2
 import dateutil.parser
@@ -60,7 +60,7 @@ class Showtime(Cmd):
                 if len(shows) == 1:
                     return ShowId(shows[0]['id'])
                 if len(shows) > 1:
-                    select_list: List[Tuple[int, str]] = [(show['id'], show['name']) for show in shows]
+                    select_list: List[Tuple[Any, Optional[str]]] = [(show['id'], show['name']) for show in shows]
                     return ShowId(self.select(select_list, 'Please select one:'))
         if self.current_show:
             return ShowId(self.current_show['id'])

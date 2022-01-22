@@ -224,9 +224,10 @@ class Database(TinyDB):
                 last_watched[show_id] = episode['watched']
 
             completed.add(show_id)
-        sorted_watched = sorted(last_watched, key=last_watched.get)
+        last_watched_list = sorted(last_watched.items(), key=lambda t: t[1])
+        show_order = [t[0] for t in last_watched_list]
         shows = cast(List[Show], self.table(SHOW).search(where('id').one_of(list(completed))))
-        return sorted(shows, key=lambda row: sorted_watched.index(row['id']))
+        return sorted(shows, key=lambda row: show_order.index(row['id']))
 
 
 def get_direct_write_db(file_name: str) -> Database:
