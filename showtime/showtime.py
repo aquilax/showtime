@@ -5,7 +5,7 @@ from ratelimit import limits, sleep_and_retry
 
 from showtime.api import Api
 from showtime.config import Config
-from showtime.database import ConnectionType, GetDatabase
+from showtime.database import ConnectionType, Database, GetDatabase, transaction
 from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId,
                             TVMazeEpisode, TVMazeShow)
 
@@ -18,13 +18,9 @@ def _get_episodes(api: Api, show_id: ShowId) -> List[TVMazeEpisode]:
 
 
 class ShowtimeApp():
-    def __init__(self, api: Api, get_database: Callable[[ConnectionType], GetDatabase], config: Config) -> None:
+    def __init__(self, api: Api, database: Database, config: Config) -> None:
         self.api = api
-        self.get_database = get_database
-        self.database_filename = config.get('Database', 'Path')
-        self.get_cached_database = get_database("cached")
-        self.get_direct_database = get_database("direct")
-        self.database = self.get_direct_database(self.database_filename)
+        self.database = database
         self.config = config
 
     def _decorate_episodes(self, episodes: List[Episode]) -> List[DecoratedEpisode]:
@@ -55,12 +51,14 @@ class ShowtimeApp():
         # add show to db
         show = self.api.show_get(show_id)
         if show:
-            _show_id = self.database.add(show)
-            # add episodes to db
-            episodes = _get_episodes(self.api, _show_id)
-            self.database.sync_episodes(_show_id, episodes, on_insert=on_episode_insert, on_update=on_episode_update)
-            if on_show_added:
-                on_show_added(show)
+            with transaction(self.database) as transacted_db:
+                _show_id = transacted_db.add_show(show)
+                # add episodes to db
+                episodes = _get_episodes(self.api, _show_id)
+                transacted_db.sync_episodes(_show_id, episodes, on_insert=on_episode_insert,
+                                            on_update=on_episode_update)
+                if on_show_added:
+                    on_show_added(show)
         return show
 
     def show_get(self, show_id: ShowId) -> Optional[Show]:
@@ -73,11 +71,13 @@ class ShowtimeApp():
 
     def episodes_update_all_watched(self, show_id: ShowId):
         """Marks all show episodes as watched"""
-        return self.database.update_watched_show(show_id, True)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched_show(show_id, True)
 
     def episodes_update_all_not_watched(self, show_id: ShowId):
         """Marks all show episodes as not watched"""
-        return self.database.update_watched_show(show_id, False)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched_show(show_id, False)
 
     def episodes_watched_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
         """Returns all watched episodes between two dates"""
@@ -93,26 +93,22 @@ class ShowtimeApp():
              on_episode_insert: Union[Callable[[TVMazeEpisode], None], None] = None,
              on_episode_update: Union[Callable[[TVMazeEpisode], None], None] = None):
         """Updates episode information for followed shows from tvmaze"""
-        ## still hacky but better
-        self.database.close()
-        with self.get_cached_database(self.database_filename) as cached_db:
-            shows = cached_db.get_active_shows()
+        with transaction(self.database) as transacted_db:
+            shows = transacted_db.get_active_shows()
             for show in shows:
                 if on_show_sync:
                     on_show_sync(show)
-                episodes = _get_episodes(self.api, show['id'])
-                cached_db.sync_episodes(show['id'], episodes, on_insert=on_episode_insert, on_update=on_episode_update)
-        ## Create new direct since there is no open method
-        self.database = self.get_direct_database(self.database_filename)
+                tv_maze_show = self.api.show_get(show['id'])
+                if tv_maze_show:
+                    transacted_db.update_show(ShowId(show['id']), tv_maze_show)
+                    tv_maze_episodes = _get_episodes(self.api, show['id'])
+                    transacted_db.sync_episodes(show['id'], tv_maze_episodes,
+                                                on_insert=on_episode_insert, on_update=on_episode_update)
 
     def episodes_patch_watchtime(self, file_name: str) -> None:
         """Patches episodes watch time from external file"""
-        ## still hacky but better
-        self.database.close()
-        with self.get_cached_database(self.database_filename) as cached_db:
-            cached_db.update_watch_times(file_name)
-        ## Create new direct since there is no open method
-        self.database = self.get_direct_database(self.database_filename)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watch_times(file_name)
 
     def show_search_api(self, query: str) -> List[TVMazeShow]:
         """Searches tvmaze for showname"""
@@ -124,11 +120,13 @@ class ShowtimeApp():
 
     def episode_update_watched(self, episode_id: EpisodeId) -> None:
         """Marks episode as watched"""
-        return self.database.update_watched(episode_id, True)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched(episode_id, True)
 
     def episode_update_not_watched(self, episode_id: EpisodeId) -> None:
         """Marks episode as not watched"""
-        return self.database.update_watched(episode_id, False)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched(episode_id, False)
 
     def episode_get_next_unwatched(self, show_id: ShowId) -> Optional[Episode]:
         """Returns the next episode from a show that has not been watched"""
@@ -141,11 +139,13 @@ class ShowtimeApp():
 
     def episodes_update_season_watched(self, show_id: ShowId, season: int) -> None:
         """Marks all episodes from a season as watched"""
-        return self.database.update_watched_show_season(ShowId(show_id), int(season), True)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched_show_season(ShowId(show_id), int(season), True)
 
     def episodes_update_season_not_watched(self, show_id: ShowId, season: int) -> None:
         """Marks all episodes from a season as non watched"""
-        return self.database.update_watched_show_season(show_id, season, False)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_watched_show_season(show_id, season, False)
 
     def episodes_get_unwatched(self, current_datetime=datetime.utcnow().isoformat()) -> List[DecoratedEpisode]:
         """Returns list of unwatched episodes"""
@@ -155,7 +155,8 @@ class ShowtimeApp():
 
     def episodes_watched_to_last_seen(self, show_id:ShowId, season: int, episode: int) -> int:
         """Marks all episodes of a show until season/episode as watched"""
-        return self.database.last_seen(show_id, season, episode)
+        with transaction(self.database) as transacted_db:
+            return transacted_db.last_seen(show_id, season, episode)
 
     def episode_get(self, episode_id: EpisodeId) -> Optional[Episode]:
         """Returns episode"""
@@ -166,9 +167,10 @@ class ShowtimeApp():
         return self.database.delete_episode(episode_id)
 
     def episodes_aired_unseen_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
+        """Returns aired but not watched episodes between dates"""
         episodes =  self.database.aired_unseen_between(from_date, to_date)
         return self._decorate_episodes(episodes)
 
-
     def episodes_get_watched(self) -> List[Episode]:
+        """Returns all watched episodes"""
         return self.database.get_watched_episodes()

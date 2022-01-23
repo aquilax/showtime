@@ -20,6 +20,7 @@ class ShowtimeTester(cmd2_ext_test.ExternalTestMixin, Showtime):
 def test_app():
     api = Mock()
     database = Mock()
+    config = Mock()
 
     attrs = {'get.return_value': None}
     config = Mock(**attrs)
@@ -307,10 +308,10 @@ def test_watching_stats(test_app):
     assert str(out.stdout).strip() == """
 Total watched episodes: 1
 Total watchtime in minutes: 60
-+Episodes per month--+
-| Month   | Episodes |
-+---------+----------+
-| 2020-01 |        1 |
-+---------+----------+
++Watchtime per month-+---------+
+| Month   | Episodes | Minutes |
++---------+----------+---------+
+| 2020-01 |        1 |      60 |
++---------+----------+---------+
 """.strip()
     assert out.data == None

@@ -13,7 +13,8 @@ PrintFunction = Callable[[str], None]
 class Output():
     """Output handler"""
 
-    def __init__(self, print_function: PrintFunction, error_function: PrintFunction, feedback_function: PrintFunction, paged_function: PrintFunction) -> None:
+    def __init__(self, print_function: PrintFunction, error_function: PrintFunction,
+                 feedback_function: PrintFunction, paged_function: PrintFunction) -> None:
         self.print_function = print_function
         self.error_function = error_function
         self.feedback_function = feedback_function
@@ -25,7 +26,7 @@ class Output():
 
     def ppaged(self, output: str) -> None:
         """Outputs a string with pagination"""
-        self.ppaged(output)
+        self.paged_function(output)
 
     def json(self, data: List[Episode]) -> None:
         """Outputs json"""
@@ -169,19 +170,22 @@ class Output():
         title = 'Completed shows'
         return str(Table(data, title=title).table)
 
-    def summary_table(self, month_totals: Dict[str, int]) -> str:
+    def summary_table(self, month_totals: Dict[str, Dict[str, int]]) -> str:
         """Formats summary as a table"""
         data = []
         data.append([
             'Month',
             'Episodes',
+            'Minutes',
         ])
         for date in sorted(month_totals.keys()):
             data.append([
                 date,
-                str(month_totals[date])
+                str(month_totals[date]['episodes']),
+                str(month_totals[date]['minutes']),
             ])
-        title = 'Episodes per month'
+        title = 'Watchtime per month'
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
+        table.justify_columns[2] = 'right'
         return str(table.table)

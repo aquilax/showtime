@@ -4,23 +4,15 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from helpers import decorated_episode, episode, show, show2, tv_maze_show
 
-from showtime.database import ConnectionType, GetDatabase
 from showtime.showtime import ShowtimeApp
 
 
 @pytest.fixture
 def test_app() -> ShowtimeApp:
     api = Mock()
-    config = Mock()
     database = Mock()
-
-    def get_database(_connection_type: ConnectionType) -> GetDatabase:
-        def get_mocked(_: str):
-            return database
-
-        return get_mocked
-
-    showtime = ShowtimeApp(api, get_database, config)
+    config = Mock()
+    showtime = ShowtimeApp(api, database, config)
     return showtime
 
 
@@ -214,7 +206,7 @@ def test_episodes_get_watched(test_app):
 
 
 def test_sync(test_app):
-    pass
+    result = test_app.episodes_get_watched()
 
 
 def test_episodes_patch_watchtime(test_app):
