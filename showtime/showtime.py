@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Callable, List, Optional, Union, cast
 
 from ratelimit import limits, sleep_and_retry
@@ -27,8 +27,20 @@ class ShowtimeApp():
         self.database = self.get_direct_database(self.database_filename)
         self.config = config
 
+    def _decorate_episodes(self, episodes: List[Episode]) -> List[DecoratedEpisode]:
+        """Adds show information to list of episodes"""
+        result: List[DecoratedEpisode] = []
+        shows = {show['id']: show for show in self.database.get_shows()}
+        for episode in episodes:
+            show_id = ShowId(episode['show_id'])
+            show = shows[show_id]
+            show_name = show['name']
+            decorated_episode = cast(DecoratedEpisode, episode | {"show_name": show_name})
+            result.append(decorated_episode)
+        return result
+
     def show_search(self, query: str) -> List[Show]:
-        """Searches shows using the API"""
+        """Searches shows using the database"""
         shows = self.database.get_shows()
         if query:
             query = query.lower()
@@ -69,7 +81,8 @@ class ShowtimeApp():
 
     def episodes_watched_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
         """Returns all watched episodes between two dates"""
-        return self.database.seen_between(from_date, to_date)
+        episodes = self.database.seen_between(from_date, to_date)
+        return self._decorate_episodes(episodes)
 
     def episodes_get(self, show_id: ShowId) -> List[Episode]:
         """Returns all episodes for a show"""
@@ -111,27 +124,34 @@ class ShowtimeApp():
 
     def episode_update_watched(self, episode_id: EpisodeId) -> None:
         """Marks episode as watched"""
-        self.database.update_watched(episode_id, True)
+        return self.database.update_watched(episode_id, True)
 
     def episode_update_not_watched(self, episode_id: EpisodeId) -> None:
         """Marks episode as not watched"""
-        self.database.update_watched(episode_id, False)
+        return self.database.update_watched(episode_id, False)
 
     def episode_get_next_unwatched(self, show_id: ShowId) -> Optional[Episode]:
         """Returns the next episode from a show that has not been watched"""
-        return self.database.get_next_unwatched(show_id)
+        episodes = self.database.get_episodes(show_id)
+        if episodes:
+            for episode in episodes:
+                if episode['watched'] == '':
+                    return episode
+        return None
 
     def episodes_update_season_watched(self, show_id: ShowId, season: int) -> None:
         """Marks all episodes from a season as watched"""
-        self.database.update_watched_show_season(ShowId(show_id), int(season), True)
+        return self.database.update_watched_show_season(ShowId(show_id), int(season), True)
 
     def episodes_update_season_not_watched(self, show_id: ShowId, season: int) -> None:
         """Marks all episodes from a season as non watched"""
         return self.database.update_watched_show_season(show_id, season, False)
 
-    def episodes_get_unwatched(self) -> List[DecoratedEpisode]:
+    def episodes_get_unwatched(self, current_datetime=datetime.utcnow().isoformat()) -> List[DecoratedEpisode]:
         """Returns list of unwatched episodes"""
-        return self.database.get_unwatched()
+        episodes = self.database.get_unwatched(current_datetime)
+        sorted_episodes = sorted(episodes, key=lambda episode: episode['airdate'] or '')
+        return self._decorate_episodes(sorted_episodes)
 
     def episodes_watched_to_last_seen(self, show_id:ShowId, season: int, episode: int) -> int:
         """Marks all episodes of a show until season/episode as watched"""
@@ -143,10 +163,12 @@ class ShowtimeApp():
 
     def episode_delete(self, episode_id: EpisodeId) -> None:
         """Deletes an episode"""
-        self.database.delete_episode(episode_id)
+        return self.database.delete_episode(episode_id)
 
     def episodes_aired_unseen_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
-        return self.database.aired_unseen_between(from_date, to_date)
+        episodes =  self.database.aired_unseen_between(from_date, to_date)
+        return self._decorate_episodes(episodes)
+
 
     def episodes_get_watched(self) -> List[Episode]:
         return self.database.get_watched_episodes()

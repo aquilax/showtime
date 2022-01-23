@@ -2,11 +2,8 @@
 requires = ["setuptools>=40.8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.flakehell]
-exclude = ["README.md"]
-format = "colored"
-max_line_length = 120
-show_source = true
+[tool.pytest.ini_options]
+norecursedirs = "tests/helpers"
 
 [tool.pylint.format]
 max-line-length = 120

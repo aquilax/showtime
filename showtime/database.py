@@ -9,7 +9,7 @@ from tinydb import TinyDB, where
 from tinydb.middlewares import CachingMiddleware
 from tinydb.storages import JSONStorage, MemoryStorage
 
-from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId,
+from showtime.types import (Episode, EpisodeId, Show, ShowId,
                             ShowStatus, TVMazeEpisode, TVMazeShow)
 
 SHOW = 'show'
@@ -70,9 +70,10 @@ class Database(TinyDB):
         episodes = cast(List[Episode], self.table(EPISODE).search(where('show_id') == show_id))
         return sorted(episodes, key=lambda ep: ep['season'] * 1000 + ep['number'])
 
-    def delete_episode(self, episode_id: EpisodeId) -> List[int]:
+    def delete_episode(self, episode_id: EpisodeId) -> None:
         """Deletes an episode from the database"""
-        return cast(List[int], self.table(EPISODE).remove(where('id') == episode_id))
+        self.table(EPISODE).remove(where('id') == episode_id)
+        return None
 
     def sync_episodes(self, show_id: ShowId, episodes: List[TVMazeEpisode],
                       on_insert: Union[Callable[[TVMazeEpisode], None], None] = None,
@@ -115,19 +116,17 @@ class Database(TinyDB):
                     }, where('id') == matched_episode['id'])
         self.table(EPISODE).insert_multiple(queue)
 
-    def update_watched(self, episode_id: EpisodeId, watched: bool) -> None:
+    def update_watched(self, episode_id: EpisodeId, watched: bool, when=datetime.utcnow().isoformat()) -> None:
         """Updates the watched date of an episode"""
-        watched_value = datetime.utcnow().isoformat() if watched else ''
+        watched_value = when if watched else ''
         self.table(EPISODE).update({
             'watched': watched_value
         }, where('id') == episode_id)
 
-    def get_unwatched(self) -> List[DecoratedEpisode]:
+    def get_unwatched(self, current_datetime: datetime) -> List[Episode]:
         """Returns all aired episodes which are not watched yet"""
-        current_datetime = datetime.utcnow().isoformat()
-        episodes = cast(List[Episode],
-                        self.table(EPISODE).search(((where('watched') == '') & (where('airdate') <= current_datetime))))
-        return self.decorate_episodes(sorted(episodes, key=lambda episode: episode['airdate'] or ''))
+        episodes = self.table(EPISODE).search(((where('watched') == '') & (where('airdate') <= current_datetime)))
+        return cast(List[Episode], episodes)
 
     def update_watched_show(self, show_id: ShowId, watched: bool) -> None:
         """Updates all episodes of a show as watched now"""
@@ -159,38 +158,19 @@ class Database(TinyDB):
         }, where('id').one_of(episode_ids))
         return len(episode_ids)
 
-    def get_next_unwatched(self, show_id: ShowId) -> Union[Episode, None]:
-        """Returns the first episode from a show that has not been watched"""
-        episodes = self.get_episodes(show_id)
-        if episodes:
-            for episode in episodes:
-                if episode['watched'] == '':
-                    return episode
-        return None
-
-    def seen_between(self, from_date: date, to_date: date) -> List[DecoratedEpisode]:
+    def seen_between(self, from_date: date, to_date: date) -> List[Episode]:
         """Returns list of episodes that were watched between two dates"""
-        is_between = lambda date: _test_between(date, from_date, to_date)
+        def is_between(date):
+            return _test_between(date, from_date, to_date)
         episodes = self.table(EPISODE).search(where('watched').test(is_between))
-        return self.decorate_episodes(cast(List[Episode], episodes))
+        return cast(List[Episode], episodes)
 
-    def aired_unseen_between(self, from_date: date, to_date: date) -> List[DecoratedEpisode]:
+    def aired_unseen_between(self, from_date: date, to_date: date) -> List[Episode]:
         """Returns list of episodes that were aired but have not been seen between two dates"""
-        is_between = lambda date: _test_between(date, from_date, to_date)
-        episodes = cast(List[Episode],
-                        self.table(EPISODE).search((where('airdate').test(is_between)) & (where('watched') == '')))
-        return self.decorate_episodes(episodes)
-
-    def decorate_episodes(self, episodes: List[Episode]) -> List[DecoratedEpisode]:
-        """Adds show information to list of episodes"""
-        result: List[DecoratedEpisode] = []
-        shows = {show['id']: show for show in self.get_shows()}
-        for episode in episodes:
-            decorated_episode = cast(DecoratedEpisode, episode)
-            show = shows[episode['show_id']]
-            decorated_episode['show_name'] = show['name']
-            result.append(decorated_episode)
-        return result
+        def is_between(date):
+            return _test_between(date, from_date, to_date)
+        episodes = self.table(EPISODE).search((where('airdate').test(is_between)) & (where('watched') == ''))
+        return cast(List[Episode], episodes)
 
     def update_watch_times(self, patch_file_name: str) -> None:
         """Updates watch times from a patch file"""
@@ -204,7 +184,8 @@ class Database(TinyDB):
 
     def get_watched_episodes(self) -> List[Episode]:
         """Returns all episodes that have not been watched"""
-        return cast(List[Episode], self.table(EPISODE).search(where('watched') != ''))
+        episodes = self.table(EPISODE).search(where('watched') != '')
+        return cast(List[Episode], episodes)
 
     def get_completed_shows(self) -> List[Show]:
         """Returns all shows that have been completed"""
@@ -244,8 +225,10 @@ def get_memory_db(_: str) -> Database:
     """Returns in-memory database instance"""
     return Database(storage=MemoryStorage)
 
+
 GetDatabase = Callable[[str], Database]
 ConnectionType = Literal["direct", "cached", "memory"]
+
 
 def get_database(connection_type: ConnectionType) -> GetDatabase:
     if connection_type == "direct":

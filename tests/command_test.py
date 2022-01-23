@@ -1,13 +1,13 @@
 """Commands tests"""
 from datetime import date
-from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
 import cmd2_ext_test
-from cmd2 import CommandResult
-from showtime.command import Showtime
 import pytest
+from cmd2 import CommandResult
+from helpers import decorated_episode, episode, show, tv_maze_show
 
+from showtime.command import Showtime
 from showtime.showtime import ShowtimeApp
 
 
@@ -15,35 +15,6 @@ class ShowtimeTester(cmd2_ext_test.ExternalTestMixin, Showtime):
     def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
-
-
-tv_maze_show = SimpleNamespace(
-    id=1,
-    name="test-show",
-    premiered="2020-01-01",
-    status="Ended",
-    url="https:/www.example.com/1"
-)
-
-show = {
-    "id": 1,
-    "name": "test-show",
-    "premiered": "2020-01-01",
-    "status": "Ended",
-}
-
-episode = {
-    "id": 1,
-    "show_id": "1",
-    "season": 1,
-    "number": 1,
-    "name": "The first episode",
-    "airdate": "2020-01-01",
-    "runtime": 60,
-    "watched": "",
-}
-
-decorated_episode = episode | {"show_name": show["name"]}
 
 @pytest.fixture
 def test_app():
