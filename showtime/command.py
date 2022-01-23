@@ -187,7 +187,7 @@ class Showtime(Cmd):
         episode_id = EpisodeId(statement)
         episode = self.app.episode_get(episode_id)
         if episode:
-            show = self.app.show_get(episode['show_id'])
+            show = self.app.show_get(ShowId(episode['show_id']))
             episodes_table = self.output.format_episodes(cast(Show, show), [episode])
             self.output.poutput(episodes_table)
             response = input('Do you want to delete this episode [y/N]:')
@@ -262,9 +262,13 @@ class Showtime(Cmd):
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_new_unwatched(self, statement: Statement) -> None:
         """Show unwatched episodes aired in the last 7 days[new_unwatched <days>]"""
-        delta = datetime.timedelta(days=(int(statement) if statement else 7) - 1)
-        from_date = (datetime.date.today() - delta)
-        to_date = datetime.date.today()
+        spl_statement = statement.split(' ')
+        days = int(spl_statement[0]) if len(spl_statement) > 0 else 7
+        d_start_date = dateutil.parser.parse(spl_statement[1]).date() if len(spl_statement) > 1 else datetime.date.today()
+
+        delta = datetime.timedelta(days=days - 1)
+        from_date = d_start_date - delta
+        to_date = d_start_date
         episodes = self.app.episodes_aired_unseen_between(from_date, to_date)
         episodes_table = self.output.format_unwatched(
             sorted(episodes, key=lambda k: k['airdate']))

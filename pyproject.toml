@@ -23,7 +23,7 @@ deps =
     pytest
     pytest-cov
     cmd2_ext_test
-commands = pytest --cov=showtime
+commands = pytest
 [testenv:mypy]
 deps =
     mypy
@@ -35,7 +35,7 @@ commands = mypy -p showtime
 [testenv:doc]
 deps = interrogate
 skip_install = true
-commands = interrogate --quiet --fail-under 80 showtime tests
+commands = interrogate --quiet --fail-under 80 showtime
 """
 
 [tool.interrogate]
