@@ -1,3 +1,8 @@
+v0.3.13
+
+* Updated dependencies
+* Major refactoring
+
 v0.3.12
 
 * Updated dependencies
