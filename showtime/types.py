@@ -1,7 +1,8 @@
+"""Showtime Types Module"""
+
 from enum import Enum
 from typing import NamedTuple
 from typing_extensions import TypedDict
-from collections import namedtuple
 
 ShowId = int
 EpisodeId = int
@@ -15,6 +16,7 @@ class TVMazeShow(NamedTuple):
     premiered: str
     status: str
     url: str
+
 
 class TVMazeEpisode(NamedTuple):
     """API Episode result"""

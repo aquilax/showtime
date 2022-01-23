@@ -1,45 +1,62 @@
+"""Showtime Output  Module"""
+
 import json
-from typing import List, Dict, Callable
-from terminaltables import AsciiTable as Table
-from showtime.types import TVMazeEpisode, TVMazeShow, Episode, DecoratedEpisode, Show
+from typing import Callable, Dict, List
+
+from terminaltables import AsciiTable as Table # type: ignore
+
+from showtime.types import (DecoratedEpisode, Episode, Show, TVMazeEpisode,
+                            TVMazeShow)
 
 PrintFunction = Callable[[str], None]
 
 class Output():
     """Output handler"""
 
-    def __init__(self, print_function: PrintFunction, error_function: PrintFunction, feedback_function: PrintFunction) -> None:
+    def __init__(self, print_function: PrintFunction, error_function: PrintFunction,
+                 feedback_function: PrintFunction, paged_function: PrintFunction) -> None:
         self.print_function = print_function
         self.error_function = error_function
         self.feedback_function = feedback_function
+        self.paged_function = paged_function
 
-    def poutput(self, str: str) -> None:
+    def poutput(self, output: str) -> None:
         """Outputs a string"""
-        self.print_function(str)
+        self.print_function(output)
+
+    def ppaged(self, output: str) -> None:
+        """Outputs a string with pagination"""
+        self.paged_function(output)
 
     def json(self, data: List[Episode]) -> None:
         """Outputs json"""
         self.print_function(json.dumps(data, sort_keys=True, indent=4))
 
-    def perror(self, str: str) -> None:
+    def perror(self, output: str) -> None:
         """Outputs an error message"""
-        self.error_function(str)
+        self.error_function(output)
 
-    def pfeedback(self, str: str) -> None:
+    def pfeedback(self, output: str) -> None:
         """Outputs a feedback message"""
-        self.feedback_function(str)
+        self.feedback_function(output)
 
-    def status_on_insert(self, episode: TVMazeEpisode) -> None:
+    def status_on_episode_insert(self, episode: TVMazeEpisode) -> None:
         """Prints status messsage when new episode is added"""
         self.poutput('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
             season=episode.season, episode=episode.number, id=episode.id,
             name=episode.name, airdate=episode.airdate))
 
-    def status_on_update(self, episode: TVMazeEpisode) -> None:
+    def status_on_episode_update(self, episode: TVMazeEpisode) -> None:
         """Prints status messsage when an episode is updated"""
         self.poutput('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
             season=episode.season, episode=episode.number, id=episode.id,
             name=episode.name, airdate=episode.airdate))
+
+    def status_on_show_added(self, show: TVMazeShow) -> None:
+        self.poutput(f"Added show: ({show.id}) {show.name} - {show.premiered}")
+
+    def status_on_show_sync(self, show: Show) -> None:
+        self.poutput(f"{show['id']}\t{show['name']} ({show['premiered']})")
 
     def format_search_results(self, search_result: List[TVMazeShow]) -> str:
         """Formats as table API search results"""
@@ -59,7 +76,7 @@ class Output():
                 show.status,
                 show.url
             ])
-        return str(Table(data, title='Search Results').table)
+        return Table(data, title='Search Results').table
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""
@@ -153,19 +170,22 @@ class Output():
         title = 'Completed shows'
         return str(Table(data, title=title).table)
 
-    def summary_table(self, month_totals: Dict[str, int]) -> str:
+    def summary_table(self, month_totals: Dict[str, Dict[str, int]]) -> str:
         """Formats summary as a table"""
         data = []
         data.append([
             'Month',
             'Episodes',
+            'Minutes',
         ])
         for date in sorted(month_totals.keys()):
             data.append([
                 date,
-                str(month_totals[date])
+                str(month_totals[date]['episodes']),
+                str(month_totals[date]['minutes']),
             ])
-        title = 'Episodes per month'
+        title = 'Watchtime per month'
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
+        table.justify_columns[2] = 'right'
         return str(table.table)
