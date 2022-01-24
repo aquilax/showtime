@@ -263,6 +263,23 @@ class Showtime(Cmd):
         self.output.json(sorted(episodes, key=lambda k: k['watched']))
 
     @cmd2.with_category(EPISODE_CATEGORY)
+    def do_watched_between(self, statement: Statement) -> None:
+        """Export seen episodes between dates[export <from_date> <to_date>]"""
+        try:
+            from_date_s, to_date_s = statement.split(' ')
+            from_date = dateutil.parser.parse(from_date_s).date()
+            to_date = dateutil.parser.parse(to_date_s).date()
+
+        except (dateutil.parser.ParserError, OverflowError):
+            self.output.perror("Invalid date")
+            return
+
+        episodes = self.app.episodes_watched_between(from_date, to_date)
+        sorted_episodes = sorted(episodes, key=lambda k: k['watched'])
+        episodes_table = self.output.format_unwatched(sorted_episodes)
+        self.output.ppaged(episodes_table)
+
+    @cmd2.with_category(EPISODE_CATEGORY)
     def do_new_unwatched(self, statement: Statement) -> None:
         """Show unwatched episodes aired in the last 7 days[new_unwatched <days>]"""
         spl_statement = statement.split(' ')
