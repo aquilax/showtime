@@ -3,11 +3,14 @@
 from showtime.database import get_memory_db, transaction
 from showtime.types import ShowStatus, TVMazeShow, TVMazeEpisode
 
+
 def get_tv_maze_show(id=1, name="show", premiered="2020", status="great", url="http://example.com") -> TVMazeShow:
     return TVMazeShow(id=id, name=name, premiered=premiered, status=status, url=url)
 
+
 def get_tv_maze_episode(id=1, season=1, number=1, name="episode1", airdate="2020-10-10", runtime=30) -> TVMazeEpisode:
     return TVMazeEpisode(id=id, season=season, number=number, name=name, airdate=airdate, runtime=runtime)
+
 
 def test_add():
     show = get_tv_maze_show()
@@ -58,4 +61,22 @@ def test_last_seen():
     assert len(episodes) == 3
     assert episodes[0]['watched'] != ''
     assert episodes[1]['watched'] != ''
-    assert episodes[2]['watched'] == '' # last episode is not watched
+    assert episodes[2]['watched'] == ''  # last episode is not watched
+
+
+def test_watch():
+    show1 = get_tv_maze_show(name="show 1")
+    episode1 = get_tv_maze_episode(id=1, name="episode1", number=1)
+    episode2 = get_tv_maze_episode(id=2, name="episode2", number=2)
+    with get_memory_db() as database:
+        with transaction(database) as transacted_db:
+            show_id = database.add_show(show1)
+            transacted_db.add_episode(show_id, episode1)
+            transacted_db.add_episode(show_id, episode2)
+        with transaction(database) as transacted_db:
+            transacted_db.update_watched(1, True)
+        episode1db = database.get_episode(1)
+        with transaction(database) as transacted_db:
+            transacted_db.update_watched(2, True)
+        episode2db = database.get_episode(2)
+    assert episode1db['watched'] != episode2db['watched']

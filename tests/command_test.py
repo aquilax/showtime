@@ -272,6 +272,22 @@ def test_export(test_app):
 """.strip()
     assert out.data == None
 
+def test_watched_between(test_app):
+    test_app.app.episodes_watched_between = MagicMock(return_value=[decorated_episode])
+
+    out = test_app.app_cmd("watched_between 2020-01-01 2021-01-01")
+
+    test_app.app.episodes_watched_between.assert_called_once_with(date(2020, 1, 1), date(2021, 1, 1))
+    assert isinstance(out, CommandResult)
+    assert str(out.stdout).strip() == """
++Episodes to watch-----+-----+-------------------+------------+---------+
+| ID | Show      | S   | E   | Name              | Aired      | Watched |
++----+-----------+-----+-----+-------------------+------------+---------+
+| 1  | test-show | S01 | E01 | The first episode | 2020-01-01 |         |
++----+-----------+-----+-----+-------------------+------------+---------+
+""".strip()
+    assert out.data == None
+
 def test_new_unwatched(test_app):
     test_app.app.episodes_aired_unseen_between = MagicMock(return_value=[decorated_episode])
 

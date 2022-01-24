@@ -147,8 +147,9 @@ class ShowtimeApp():
         with transaction(self.database) as transacted_db:
             return transacted_db.update_watched_show_season(show_id, season, False)
 
-    def episodes_get_unwatched(self, current_datetime=datetime.utcnow().isoformat()) -> List[DecoratedEpisode]:
+    def episodes_get_unwatched(self, when:Optional[datetime] = None) -> List[DecoratedEpisode]:
         """Returns list of unwatched episodes"""
+        current_datetime = when if when else datetime.utcnow()
         episodes = self.database.get_unwatched(current_datetime)
         sorted_episodes = sorted(episodes, key=lambda episode: episode['airdate'] or '')
         return self._decorate_episodes(sorted_episodes)

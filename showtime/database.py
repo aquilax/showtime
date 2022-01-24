@@ -128,35 +128,39 @@ class Database(TinyDB):
                     }, where('id') == matched_episode['id'])
         self.table(EPISODE).insert_multiple(queue)
 
-    def update_watched(self, episode_id: EpisodeId, watched: bool, when=datetime.utcnow().isoformat()) -> None:
+    def update_watched(self, episode_id: EpisodeId, watched: bool, when: Optional[datetime] = None) -> None:
         """Updates the watched date of an episode"""
-        watched_value = when if watched else ''
+        watched_date = when if when else datetime.utcnow().isoformat()
+        watched_value = watched_date if watched else ''
         self.table(EPISODE).update({
             'watched': watched_value
         }, where('id') == episode_id)
 
     def get_unwatched(self, current_datetime: datetime) -> List[Episode]:
         """Returns all aired episodes which are not watched yet"""
-        episodes = self.table(EPISODE).search(((where('watched') == '') & (where('airdate') <= current_datetime)))
+        episodes = self.table(EPISODE).search(((where('watched') == '') & (where('airdate') <= current_datetime.isoformat())))
         return cast(List[Episode], episodes)
 
-    def update_watched_show(self, show_id: ShowId, watched: bool, when=datetime.utcnow().isoformat()) -> None:
+    def update_watched_show(self, show_id: ShowId, watched: bool, when:Optional[datetime] = None) -> None:
         """Updates all episodes of a show as watched now"""
-        watched_value = when if watched else ''
+        watched_date = when if when else datetime.utcnow().isoformat()
+        watched_value = watched_date if watched else ''
         self.table(EPISODE).update({
             'watched': watched_value
         }, where('show_id') == show_id)
 
     def update_watched_show_season(self, show_id: ShowId, season: int, watched: bool,
-                                   when=datetime.utcnow().isoformat()) -> None:
+                                   when:Optional[datetime] = None) -> None:
         """Updates all episodes of a show and season as watched now"""
-        watched_value = when if watched else ''
+        watched_date = when if when else datetime.utcnow().isoformat()
+        watched_value = watched_date if watched else ''
         self.table(EPISODE).update({
             'watched': watched_value
         }, ((where('show_id') == show_id) & (where('season') == season)))
 
-    def last_seen(self, show_id: ShowId, season: int, number: int, when=datetime.utcnow().isoformat()) -> int:
+    def last_seen(self, show_id: ShowId, season: int, number: int, when:Optional[datetime] = None) -> int:
         """Updates all show episodes as seen up to season and number"""
+        watched_date = when if when else datetime.utcnow().isoformat()
         episodes = self.get_episodes(show_id)
         episode_ids = []
         for episode in episodes:
@@ -166,7 +170,7 @@ class Database(TinyDB):
                 episode_ids.append(episode['id'])
                 continue
         self.table(EPISODE).update({
-            'watched': when
+            'watched': watched_date
         }, where('id').one_of(episode_ids))
         return len(episode_ids)
 
