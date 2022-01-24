@@ -1,3 +1,7 @@
+v0.3.14
+
+* Fixes watch-time initialization bug
+
 v0.3.13
 
 * Updated dependencies
