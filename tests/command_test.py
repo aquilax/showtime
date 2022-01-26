@@ -1,5 +1,5 @@
 """Commands tests"""
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import MagicMock, Mock
 
 import cmd2_ext_test
@@ -16,6 +16,7 @@ class ShowtimeTester(cmd2_ext_test.ExternalTestMixin, Showtime):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
 
+
 @pytest.fixture
 def test_app():
     api = Mock()
@@ -31,6 +32,7 @@ def test_app():
     app = ShowtimeTester(showtime)
 
     config.get.assert_called_with('History', 'Path')
+    app._get_current_datetime = MagicMock(return_value=datetime(2020, 1, 1, 1, 0))
 
     app.fixture_setup()
     yield app
@@ -83,6 +85,7 @@ def test_episodes(test_app):
 """.strip()
     assert out.data == None
 
+
 def test_set_show(test_app):
     test_app.app.show_get = MagicMock(return_value=show)
 
@@ -93,12 +96,14 @@ def test_set_show(test_app):
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
 
+
 def test_unset_show(test_app):
     out = test_app.app_cmd("unset_show")
 
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_completed(test_app):
     test_app.app.show_get_completed = MagicMock(return_value=[show])
@@ -107,14 +112,16 @@ def test_completed(test_app):
 
     test_app.app.show_get_completed.assert_called_with()
     assert isinstance(out, CommandResult)
+    print(out.stdout)
     assert str(out.stdout).strip() == """
-+Completed shows-+------------+--------+
-| ID | Name      | Premiered  | Status |
-+----+-----------+------------+--------+
-| 1  | test-show | 2020-01-01 | Ended  |
-+----+-----------+------------+--------+
++Completed shows-----+------------+--------+
+| # | ID | Name      | Premiered  | Status |
++---+----+-----------+------------+--------+
+| 1 |  1 | test-show | 2020-01-01 | Ended  |
++---+----+-----------+------------+--------+
 """.strip()
     assert out.data == None
+
 
 def test_sync(test_app):
     test_app.app.sync = MagicMock()
@@ -125,14 +132,16 @@ def test_sync(test_app):
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
 
+
 def test_watch(test_app):
     test_app.app.episode_update_watched = MagicMock()
     out = test_app.app_cmd("watch 1,2")
 
-    test_app.app.episode_update_watched.assert_called_with(2)
+    test_app.app.episode_update_watched.assert_called_with(2, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_next(test_app):
     test_app.app.show_get = MagicMock(return_value=show)
@@ -153,6 +162,7 @@ Did you watch this episode [Y/n]:
 """.strip()
     assert out.data == None
 
+
 def test_delete(test_app):
     test_app.app.episode_get = MagicMock(return_value=episode)
     test_app.app.show_get = MagicMock(return_value=show)
@@ -172,62 +182,68 @@ Do you want to delete this episode [y/N]:
 """.strip()
     assert out.data == None
 
+
 def test_unwatch(test_app):
     test_app.app.episode_update_not_watched = MagicMock()
 
     out = test_app.app_cmd("unwatch 1")
 
-    test_app.app.episode_update_not_watched.assert_called_once_with(1)
+    test_app.app.episode_update_not_watched.assert_called_once_with(1, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_watch_all(test_app):
     test_app.app.episodes_update_all_watched = MagicMock()
 
     out = test_app.app_cmd("watch_all 1")
 
-    test_app.app.episodes_update_all_watched.assert_called_once_with(1)
+    test_app.app.episodes_update_all_watched.assert_called_once_with(1, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_unwatch_all(test_app):
     test_app.app.episodes_update_all_not_watched = MagicMock()
 
     out = test_app.app_cmd("unwatch_all 1")
 
-    test_app.app.episodes_update_all_not_watched.assert_called_once_with(1)
+    test_app.app.episodes_update_all_not_watched.assert_called_once_with(1, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_watch_all_season(test_app):
     test_app.app.episodes_update_season_watched = MagicMock()
 
     out = test_app.app_cmd("watch_all_season 1 2")
 
-    test_app.app.episodes_update_season_watched.assert_called_once_with(1, 2)
+    test_app.app.episodes_update_season_watched.assert_called_once_with(1, 2, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_unwatch_all_season(test_app):
     test_app.app.episodes_update_season_not_watched = MagicMock()
 
     out = test_app.app_cmd("unwatch_all_season 1 2")
 
-    test_app.app.episodes_update_season_not_watched.assert_called_once_with(1, 2)
+    test_app.app.episodes_update_season_not_watched.assert_called_once_with(1, 2,  datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """""".strip()
     assert out.data == None
+
 
 def test_unwatched(test_app):
     test_app.app.episodes_get_unwatched = MagicMock(return_value=[decorated_episode])
 
     out = test_app.app_cmd("unwatched")
 
-    test_app.app.episodes_get_unwatched.assert_called_once()
+    test_app.app.episodes_get_unwatched.assert_called_once_with(datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
 +Episodes to watch-----+-----+-------------------+------------+---------+
@@ -238,15 +254,17 @@ def test_unwatched(test_app):
 """.strip()
     assert out.data == None
 
+
 def test_last_seen(test_app):
     test_app.app.episodes_watched_to_last_seen = MagicMock(return_value=4)
 
     out = test_app.app_cmd("last_seen 1 2 3")
 
-    test_app.app.episodes_watched_to_last_seen.assert_called_once_with(1, 2, 3)
+    test_app.app.episodes_watched_to_last_seen.assert_called_once_with(1, 2, 3, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """4 episodes marked as seen""".strip()
     assert out.data == None
+
 
 def test_export(test_app):
     test_app.app.episodes_watched_between = MagicMock(return_value=[decorated_episode])
@@ -272,6 +290,7 @@ def test_export(test_app):
 """.strip()
     assert out.data == None
 
+
 def test_watched_between(test_app):
     test_app.app.episodes_watched_between = MagicMock(return_value=[decorated_episode])
 
@@ -287,6 +306,7 @@ def test_watched_between(test_app):
 +----+-----------+-----+-----+-------------------+------------+---------+
 """.strip()
     assert out.data == None
+
 
 def test_new_unwatched(test_app):
     test_app.app.episodes_aired_unseen_between = MagicMock(return_value=[decorated_episode])
@@ -304,15 +324,6 @@ def test_new_unwatched(test_app):
 """.strip()
     assert out.data == None
 
-def test_patch_watchtime(test_app):
-    test_app.app.episodes_patch_watchtime = MagicMock()
-
-    out = test_app.app_cmd("patch_watchtime /tmp/patch.csv")
-
-    test_app.app.episodes_patch_watchtime.assert_called_once_with("/tmp/patch.csv")
-    assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """""".strip()
-    assert out.data == None
 
 def test_watching_stats(test_app):
     test_app.app.episodes_get_watched = MagicMock(return_value=[episode | {'watched': '2020-01-01'}])

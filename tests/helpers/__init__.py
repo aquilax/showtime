@@ -8,6 +8,27 @@ tv_maze_show = SimpleNamespace(
     url="https:/www.example.com/1"
 )
 
+
+def get_tv_maze_episode(id=1, name="The first episode", airdate="2020-01-01",
+                        runtime=60, season=1, number=1):
+    return SimpleNamespace(id=id,
+                           name=name,
+                           airdate=airdate,
+                           runtime=runtime,
+                           season=season,
+                           number=number,
+                           )
+
+
+tv_maze_episode = SimpleNamespace(
+    id=1,
+    name="The first episode",
+    airdate="2020-01-01",
+    runtime=60,
+    season=1,
+    number=1,
+)
+
 show = {
     "id": 1,
     "name": "test-show",

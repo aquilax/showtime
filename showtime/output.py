@@ -155,20 +155,27 @@ class Output():
         """formats list of completed shows as a table"""
         data = []
         data.append([
+            '#',
             'ID',
             'Name',
             'Premiered',
             'Status'
         ])
+        i = 0
         for show in shows:
             data.append([
+                str(i+1),
                 str(show['id']),
                 show['name'],
                 show['premiered'],
                 show['status'],
             ])
+            i = i + 1
         title = 'Completed shows'
-        return str(Table(data, title=title).table)
+        table = Table(data, title=title)
+        table.justify_columns[0] = 'right'
+        table.justify_columns[1] = 'right'
+        return str(table.table)
 
     def summary_table(self, month_totals: Dict[str, Dict[str, int]]) -> str:
         """Formats summary as a table"""
