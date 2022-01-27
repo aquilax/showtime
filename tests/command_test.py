@@ -112,7 +112,6 @@ def test_completed(test_app):
 
     test_app.app.show_get_completed.assert_called_with()
     assert isinstance(out, CommandResult)
-    print(out.stdout)
     assert str(out.stdout).strip() == """
 +Completed shows-----+------------+--------+
 | # | ID | Name      | Premiered  | Status |

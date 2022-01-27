@@ -1,6 +1,6 @@
-from types import SimpleNamespace
+from showtime.types import TVMazeEpisode, TVMazeShow
 
-tv_maze_show = SimpleNamespace(
+tv_maze_show = TVMazeShow(
     id=1,
     name="test-show",
     premiered="2020-01-01",
@@ -11,7 +11,7 @@ tv_maze_show = SimpleNamespace(
 
 def get_tv_maze_episode(id=1, name="The first episode", airdate="2020-01-01",
                         runtime=60, season=1, number=1):
-    return SimpleNamespace(id=id,
+    return TVMazeEpisode(id=id,
                            name=name,
                            airdate=airdate,
                            runtime=runtime,
@@ -20,7 +20,7 @@ def get_tv_maze_episode(id=1, name="The first episode", airdate="2020-01-01",
                            )
 
 
-tv_maze_episode = SimpleNamespace(
+tv_maze_episode = TVMazeEpisode(
     id=1,
     name="The first episode",
     airdate="2020-01-01",

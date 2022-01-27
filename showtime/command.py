@@ -9,9 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 import cmd2
 import dateutil.parser
 from cmd2 import Cmd, Statement
-from tvmaze.api import Api as TVMazeApi  # type: ignore
 
-from showtime.api import Api
+from showtime.api import Api, get_default_pool_manager
 from showtime.config import Config
 from showtime.database import get_cashed_write_db, get_memory_db
 from showtime.output import Output
@@ -338,7 +337,7 @@ class Showtime(Cmd):
 
 
 def main() -> None:
-    api = Api(TVMazeApi())
+    api = Api(get_default_pool_manager())
     config = Config()
     config.load()
     dry_run = os.getenv('SHOWTIME_DRY_RUN') != None
