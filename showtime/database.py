@@ -43,9 +43,9 @@ class Database(TinyDB):
             })
         return ShowId(tv_maze_show.id)
 
-    def update_show(self, show_id, tv_maze_show: TVMazeShow) -> None:
+    def update_show(self, show_id, tv_maze_show: TVMazeShow) -> List[int]:
         """Updates show information"""
-        self.table(SHOW).update({
+        return self.table(SHOW).update({
             'name': tv_maze_show.name,
             'premiered': tv_maze_show.premiered,
             'status': tv_maze_show.status
@@ -81,9 +81,9 @@ class Database(TinyDB):
         """Returns single episode"""
         return cast(Optional[Episode], self.table(EPISODE).get(where('id') == episode_id))
 
-    def delete_episode(self, episode_id: EpisodeId) -> None:
+    def delete_episode(self, episode_id: EpisodeId) -> List[int]:
         """Deletes an episode from the database"""
-        self.table(EPISODE).remove(where('id') == episode_id)
+        return self.table(EPISODE).remove(where('id') == episode_id)
 
     def insert_episodes(self, episodes: List[Dict]) -> List[int]:
         """Inserts list of episodes"""
@@ -98,25 +98,21 @@ class Database(TinyDB):
         watched_value = when.isoformat() if watched else NOT_WATCHED_VALUE
         return self.table(EPISODE).update({'watched': watched_value}, query)
 
-    def update_watched(self, episode_id: EpisodeId, watched: bool, when: datetime) -> int:
+    def update_watched(self, episode_id: EpisodeId, watched: bool, when: datetime) -> List[int]:
         """Updates the watched date of an episode"""
-        updated = self._update_watched(watched, when, where('id') == episode_id)
-        return len(updated)
+        return self._update_watched(watched, when, where('id') == episode_id)
 
-    def update_watched_episodes(self, episode_ids: List[EpisodeId], watched: bool, when: datetime) -> int:
+    def update_watched_episodes(self, episode_ids: List[EpisodeId], watched: bool, when: datetime) -> List[int]:
         """Updates the watched date of an episode"""
-        updated = self._update_watched(watched, when, where('id').one_of(episode_ids))
-        return len(updated)
+        return self._update_watched(watched, when, where('id').one_of(episode_ids))
 
-    def update_watched_show(self, show_id: ShowId, watched: bool, when: datetime) -> int:
+    def update_watched_show(self, show_id: ShowId, watched: bool, when: datetime) -> List[int]:
         """Updates all episodes of a show as watched now"""
-        updated = self._update_watched(watched, when, where('show_id') == show_id)
-        return len(updated)
+        return self._update_watched(watched, when, where('show_id') == show_id)
 
-    def update_watched_show_season(self, show_id: ShowId, season: int, watched: bool, when: datetime) -> int:
+    def update_watched_show_season(self, show_id: ShowId, season: int, watched: bool, when: datetime) -> List[int]:
         """Updates all episodes of a show and season as watched now"""
-        updated = self._update_watched(watched, when, (where('show_id') == show_id) & (where('season') == season))
-        return len(updated)
+        return self._update_watched(watched, when, (where('show_id') == show_id) & (where('season') == season))
 
     def _search_episodes(self, query: QueryLike) -> List[Episode]:
         episodes = self.table(EPISODE).search(query)
@@ -129,7 +125,7 @@ class Database(TinyDB):
 
     def get_unwatched(self, when: datetime) -> List[Episode]:
         """Returns all aired episodes which are not watched yet"""
-        return self._search_episodes((where('watched') == '') & (where('airdate') <= when.isoformat()))
+        return self._search_episodes((where('watched') == NOT_WATCHED_VALUE) & (where('airdate') <= when.isoformat()))
 
     def seen_between(self, from_date: date, to_date: date) -> List[Episode]:
         """Returns list of episodes that were watched between two dates"""
@@ -141,7 +137,7 @@ class Database(TinyDB):
         """Returns list of episodes that were aired but have not been seen between two dates"""
         def is_between(in_date):
             return _test_between(in_date, from_date, to_date)
-        return self._search_episodes(where('airdate').test(is_between)) & (where('watched') == '')
+        return self._search_episodes(where('airdate').test(is_between) & (where('watched') == NOT_WATCHED_VALUE))
 
     def get_watched_episodes(self) -> List[Episode]:
         """Returns all episodes that have not been watched"""

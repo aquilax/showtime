@@ -189,12 +189,12 @@ class ShowtimeApp():
         """Returns configuration"""
         return self.config
 
-    def episode_update_watched(self, episode_id: EpisodeId, when: datetime) -> int:
+    def episode_update_watched(self, episode_id: EpisodeId, when: datetime) -> List[int]:
         """Marks episode as watched"""
         with transaction(self.database) as transacted_db:
             return transacted_db.update_watched(episode_id, True, when)
 
-    def episode_update_not_watched(self, episode_id: EpisodeId, when: datetime) -> int:
+    def episode_update_not_watched(self, episode_id: EpisodeId, when: datetime) -> List[int]:
         """Marks episode as not watched"""
         with transaction(self.database) as transacted_db:
             return transacted_db.update_watched(episode_id, False, when)
@@ -208,12 +208,12 @@ class ShowtimeApp():
                     return episode
         return None
 
-    def episodes_update_season_watched(self, show_id: ShowId, season: int, when: datetime) -> int:
+    def episodes_update_season_watched(self, show_id: ShowId, season: int, when: datetime) -> List[int]:
         """Marks all episodes from a season as watched"""
         with transaction(self.database) as transacted_db:
             return transacted_db.update_watched_show_season(ShowId(show_id), int(season), True, when)
 
-    def episodes_update_season_not_watched(self, show_id: ShowId, season: int, when: datetime) -> int:
+    def episodes_update_season_not_watched(self, show_id: ShowId, season: int, when: datetime) -> List[int]:
         """Marks all episodes from a season as non watched"""
         with transaction(self.database) as transacted_db:
             return transacted_db.update_watched_show_season(show_id, season, False, when)
@@ -224,7 +224,7 @@ class ShowtimeApp():
         sorted_episodes = sorted(episodes, key=lambda episode: episode['airdate'] or '')
         return self._decorate_episodes(sorted_episodes)
 
-    def episodes_watched_to_last_seen(self, show_id: ShowId, season: int, episode_number: int, when: datetime) -> int:
+    def episodes_watched_to_last_seen(self, show_id: ShowId, season: int, episode_number: int, when: datetime) -> List[int]:
         """Marks all episodes of a show until season/episode as watched"""
         with transaction(self.database) as transacted_db:
             episodes = transacted_db.get_episodes(show_id)
@@ -241,7 +241,7 @@ class ShowtimeApp():
         """Returns episode"""
         return self.database.get_episode(episode_id)
 
-    def episode_delete(self, episode_id: EpisodeId) -> None:
+    def episode_delete(self, episode_id: EpisodeId) -> List[int]:
         """Deletes an episode"""
         return self.database.delete_episode(episode_id)
 

@@ -199,7 +199,8 @@ class Showtime(Cmd):
             self.output.poutput(episodes_table)
             response = input('Do you want to delete this episode [y/N]:')
             if response.lower() in ['y']:
-                return self.app.episode_delete(EpisodeId(episode['id']))
+                self.app.episode_delete(EpisodeId(episode['id']))
+                return
             return self.output.pfeedback('Canceling...')
         self.output.perror('Invalid episode_id')
 
