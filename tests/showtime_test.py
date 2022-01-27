@@ -41,11 +41,16 @@ def test_show_get_not_found(test_app):
 
 
 def test_show_get_completed(test_app):
-    test_app.database.get_completed_shows = MagicMock(return_value=[show, show2])
+    test_app.database.get_shows_by_ids = MagicMock(return_value=[show])
+    test_app.database.get_all_episodes = MagicMock(return_value=iter([
+        episode | {'watched': '2020-01-01'}
+    ]))
 
     result = test_app.show_get_completed()
 
-    assert result == [show, show2]
+    test_app.database.get_all_episodes.assert_called_once()
+    test_app.database.get_shows_by_ids.assert_called_once_with([1])
+    assert result == [show]
 
 
 def test_episodes_update_all_watched(test_app):

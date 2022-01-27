@@ -1,6 +1,6 @@
 import csv
 from datetime import date, datetime
-from typing import Callable, List, Optional, Union, cast
+from typing import Callable, Dict, List, Optional, Set, Union, cast
 
 import dateutil.parser
 from ratelimit import limits, sleep_and_retry
@@ -55,6 +55,7 @@ class ShowtimeApp():
 
     def _sync_episodes(self, db: Database, show_id: ShowId, tv_maze_episodes: List[TVMazeEpisode],                      on_insert: Optional[Callable[[TVMazeEpisode], None]] = None,
                        on_update: Optional[Callable[[TVMazeEpisode], None]] = None):
+        """Synchronizes followed shows data with the upstream api"""
         insert_queue = []
         update_queue = []
         existing_episodes = db.get_episodes(show_id)
@@ -111,8 +112,27 @@ class ShowtimeApp():
         return self.database.get_show(show_id)
 
     def show_get_completed(self) -> List[Show]:
-        """Returns list of completed shows"""
-        return self.database.get_completed_shows()
+        """Returns all shows that have been completed"""
+        completed: Set[ShowId] = set()
+        partial: Set[ShowId] = set()
+        last_watched: Dict[ShowId, str] = {}
+        for episode in self.database.get_all_episodes():
+            show_id = ShowId(episode['show_id'])
+            if show_id in partial:
+                continue
+            if episode['watched'] == '':
+                partial.add(show_id)
+                if show_id in completed:
+                    completed.remove(show_id)
+                continue
+            if (not show_id in last_watched) or (last_watched[show_id] < episode['watched']):
+                last_watched[show_id] = episode['watched']
+
+            completed.add(show_id)
+        last_watched_list = sorted(last_watched.items(), key=lambda t: t[1])
+        show_order = [t[0] for t in last_watched_list]
+        shows = self.database.get_shows_by_ids(list(completed))
+        return sorted(shows, key=lambda row: show_order.index(row['id']))
 
     def episodes_update_all_watched(self, show_id: ShowId, when: datetime):
         """Marks all show episodes as watched"""

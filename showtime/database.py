@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from datetime import date, datetime
-from typing import (Tuple, Callable, Dict, Generator, List, Literal, Optional, Set,
+from typing import (Iterable, Iterator, Tuple, Callable, Dict, Generator, List, Literal, Optional, Set,
                     cast)
 
 import dateutil.parser
@@ -44,6 +44,7 @@ class Database(TinyDB):
         return ShowId(tv_maze_show.id)
 
     def update_show(self, show_id, tv_maze_show: TVMazeShow) -> None:
+        """Updates show information"""
         self.table(SHOW).update({
             'name': tv_maze_show.name,
             'premiered': tv_maze_show.premiered,
@@ -83,12 +84,13 @@ class Database(TinyDB):
     def delete_episode(self, episode_id: EpisodeId) -> None:
         """Deletes an episode from the database"""
         self.table(EPISODE).remove(where('id') == episode_id)
-        return None
 
     def insert_episodes(self, episodes: List[Dict]) -> List[int]:
+        """Inserts list of episodes"""
         return self.table(EPISODE).insert_multiple(episodes)
 
     def update_episodes(self, episodes: List[Tuple[Dict, int]]) -> List[int]:
+        """Updates list of episodes"""
         updates = list(map(lambda el: (el[0], where('id') == el[1]), episodes))
         return self.table(EPISODE).update_multiple(updates)
 
@@ -145,28 +147,14 @@ class Database(TinyDB):
         """Returns all episodes that have not been watched"""
         return self._search_episodes(where('watched') != NOT_WATCHED_VALUE)
 
-    def get_completed_shows(self) -> List[Show]:
-        """Returns all shows that have been completed"""
-        completed: Set[ShowId] = set()
-        partial: Set[ShowId] = set()
-        last_watched: Dict[ShowId, str] = {}
-        for episode in self.table(EPISODE):
-            show_id = episode['show_id']
-            if show_id in partial:
-                continue
-            if episode['watched'] == '':
-                partial.add(show_id)
-                if show_id in completed:
-                    completed.remove(show_id)
-                continue
-            if (not show_id in last_watched) or (last_watched[show_id] < episode['watched']):
-                last_watched[show_id] = episode['watched']
+    def get_all_episodes(self) -> Iterator[Episode]:
+        """Returns all episodes iterator"""
+        return cast(Iterator[Episode], self.table(EPISODE))
 
-            completed.add(show_id)
-        last_watched_list = sorted(last_watched.items(), key=lambda t: t[1])
-        show_order = [t[0] for t in last_watched_list]
-        shows = cast(List[Show], self.table(SHOW).search(where('id').one_of(list(completed))))
-        return sorted(shows, key=lambda row: show_order.index(row['id']))
+    def get_shows_by_ids(self, show_ids: List[ShowId]) -> List[Show]:
+        """Returns list of shows given list of show id-s"""
+        shows = self.table(SHOW).search(where('id').one_of(show_ids))
+        return cast(List[Show], shows)
 
 
 def get_direct_write_db(file_name: str) -> Database:
@@ -184,12 +172,9 @@ def get_memory_db() -> Database:
     return Database(storage=MemoryStorage)
 
 
-GetDatabase = Callable[[str], Database]
-ConnectionType = Literal["direct", "cached", "memory"]
-
-
 @contextmanager
 def transaction(database: Database) -> Generator[Database, None, None]:
+    """Returns database and flushes the data on exit"""
     try:
         yield database
     finally:
