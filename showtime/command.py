@@ -1,19 +1,18 @@
 """Showtime Commands Module"""
 
-import datetime
 import os
 import sys
+from datetime import date, datetime, timedelta
 from functools import reduce
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import cmd2
 import dateutil.parser
 from cmd2 import Cmd, Statement
-from tvmaze.api import Api as TVMazeApi # type: ignore
-from showtime.api import Api
 
+from showtime.api import Api, get_default_pool_manager
 from showtime.config import Config
-from showtime.database import (get_cashed_write_db, get_memory_db)
+from showtime.database import get_cashed_write_db, get_memory_db
 from showtime.output import Output
 from showtime.showtime import ShowtimeApp
 from showtime.types import Episode, EpisodeId, Show, ShowId
@@ -40,6 +39,9 @@ class Showtime(Cmd):
         self.dry_run = dry_run
         self.output = Output(self.poutput, self.perror, self.pfeedback, self.ppaged)
         self.prompt = self._get_prompt('')
+
+    def _get_current_datetime(self) -> datetime:
+        return datetime.utcnow()
 
     def _get_prompt(self, name: str = '') -> str:
         """Changes the prompt"""
@@ -156,8 +158,9 @@ class Showtime(Cmd):
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch(self, statement: Statement) -> None:
         """Mark episodes as watched [watch <episode_id,...>]"""
+        when = self._get_current_datetime()
         for episode_id in [e.strip() for e in statement.split(',')]:
-            self.app.episode_update_watched(EpisodeId(episode_id))
+            self.app.episode_update_watched(EpisodeId(episode_id), when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_next(self, statement: Statement) -> None:
@@ -178,7 +181,8 @@ class Showtime(Cmd):
             self.output.poutput(episodes_table)
             response = input('Did you watch this episode [Y/n]:')
             if response.lower() in ['y', '']:
-                self.app.episode_update_watched(EpisodeId(episode['id']))
+                when = self._get_current_datetime()
+                self.app.episode_update_watched(EpisodeId(episode['id']), when)
                 return
             self.output.pfeedback('Canceling...')
             return
@@ -202,36 +206,42 @@ class Showtime(Cmd):
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch(self, statement: Statement) -> None:
         """Mark episode as not watched [unwatch <episode_id>]"""
-        self.app.episode_update_not_watched(EpisodeId(statement))
+        when = self._get_current_datetime()
+        self.app.episode_update_not_watched(EpisodeId(statement), when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all(self, statement: Statement) -> None:
         """Mark all episodes in a show as watched [watch_all <show_id>]"""
         show_id = self._get_show_id(statement)
-        self.app.episodes_update_all_watched(show_id)
+        when = self._get_current_datetime()
+        self.app.episodes_update_all_watched(show_id, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch_all(self, statement: Statement) -> None:
         """Mark all episodes in a show as not watched [unwatch_all <show_id>]"""
         show_id = self._get_show_id(statement)
-        self.app.episodes_update_all_not_watched(show_id)
+        when = self._get_current_datetime()
+        self.app.episodes_update_all_not_watched(show_id, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all_season(self, statement: Statement) -> None:
         """Mark all episodes in a show and season as watched [watch_all_season <show_id> <season>]"""
         show_id, season = statement.split(' ')
-        self.app.episodes_update_season_watched(ShowId(show_id), int(season))
+        when = self._get_current_datetime()
+        self.app.episodes_update_season_watched(ShowId(show_id), int(season), when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatch_all_season(self, statement: Statement) -> None:
         """Mark all episodes in a show and season as not watched [unwatch_all_season <show_id> <season>]"""
         show_id, season = statement.split(' ')
-        self.app.episodes_update_season_not_watched(ShowId(show_id), int(season))
+        when = self._get_current_datetime()
+        self.app.episodes_update_season_not_watched(ShowId(show_id), int(season), when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_unwatched(self, _: Statement) -> None:
         """Show list of all episodes not watched yet [unwatched]"""
-        episodes = self.app.episodes_get_unwatched()
+        when = self._get_current_datetime()
+        episodes = self.app.episodes_get_unwatched(when)
         episodes_table = self.output.format_unwatched(episodes)
         self.output.poutput(episodes_table)
 
@@ -239,7 +249,8 @@ class Showtime(Cmd):
     def do_last_seen(self, statement: Statement) -> None:
         """Mark all episodes as seen up to the defined one [last_seen <show_id> <season> <episode>]"""
         show_id, season, episode = statement.split(' ')
-        count = self.app.episodes_watched_to_last_seen(ShowId(show_id), int(season), int(episode))
+        when = self._get_current_datetime()
+        count = self.app.episodes_watched_to_last_seen(ShowId(show_id), int(season), int(episode), when)
         self.output.poutput(f'{count} episodes marked as seen')
 
     def do_config(self, _: Statement) -> None:
@@ -284,9 +295,9 @@ class Showtime(Cmd):
         """Show unwatched episodes aired in the last 7 days[new_unwatched <days>]"""
         spl_statement = statement.split(' ')
         days = int(spl_statement[0]) if len(spl_statement) > 0 and spl_statement[0] != '' else 7
-        d_start_date = dateutil.parser.parse(spl_statement[1]).date() if len(spl_statement) > 1 else datetime.date.today()
+        d_start_date = dateutil.parser.parse(spl_statement[1]).date() if len(spl_statement) > 1 else date.today()
 
-        delta = datetime.timedelta(days=days - 1)
+        delta = timedelta(days=days - 1)
         from_date = d_start_date - delta
         to_date = d_start_date
         episodes = self.app.episodes_aired_unseen_between(from_date, to_date)
@@ -326,7 +337,7 @@ class Showtime(Cmd):
 
 
 def main() -> None:
-    api = Api(TVMazeApi())
+    api = Api(get_default_pool_manager())
     config = Config()
     config.load()
     dry_run = os.getenv('SHOWTIME_DRY_RUN') != None

@@ -1,11 +1,13 @@
+import csv
 from datetime import date, datetime
-from typing import Callable, List, Optional, Union, cast
+from typing import Callable, Dict, List, Optional, Set, Union, cast
 
+import dateutil.parser
 from ratelimit import limits, sleep_and_retry
 
 from showtime.api import Api
 from showtime.config import Config
-from showtime.database import ConnectionType, Database, GetDatabase, transaction
+from showtime.database import Database, transaction, NOT_WATCHED_VALUE
 from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId,
                             TVMazeEpisode, TVMazeShow)
 
@@ -15,6 +17,14 @@ from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId,
 def _get_episodes(api: Api, show_id: ShowId) -> List[TVMazeEpisode]:
     """Downloads show information from API"""
     return cast(List[TVMazeEpisode], api.episodes_list(show_id))
+
+
+def needs_update(episode: Episode, tv_maze_episode: TVMazeEpisode):
+    return (episode['name'] != tv_maze_episode.name or
+        episode['airdate'] != tv_maze_episode.airdate or
+        episode['runtime'] != tv_maze_episode.runtime or
+        episode['season'] != tv_maze_episode.season or
+        episode['number'] != tv_maze_episode.number)
 
 
 class ShowtimeApp():
@@ -43,6 +53,42 @@ class ShowtimeApp():
             shows = [s for s in shows if query in s['name'].lower()]
         return sorted(shows, key=lambda k: k['name'])
 
+    def _sync_episodes(self, db: Database, show_id: ShowId, tv_maze_episodes: List[TVMazeEpisode],                      on_insert: Optional[Callable[[TVMazeEpisode], None]] = None,
+                       on_update: Optional[Callable[[TVMazeEpisode], None]] = None):
+        """Synchronizes followed shows data with the upstream api"""
+        insert_queue = []
+        update_queue = []
+        existing_episodes = db.get_episodes(show_id)
+        for episode in tv_maze_episodes:
+            matched = [x for x in existing_episodes if x['id'] == episode.id]
+            if not matched:
+                if on_insert:
+                    on_insert(episode)
+                insert_queue.append({
+                    'id': episode.id,
+                    'show_id': show_id,
+                    'season': episode.season,
+                    'number': episode.number,
+                    'name': episode.name,
+                    'airdate': episode.airdate,
+                    'runtime': episode.runtime,
+                    'watched': NOT_WATCHED_VALUE
+                })
+            else:
+                matched_episode = matched.pop()
+                if needs_update(matched_episode, episode):
+                    if on_update:
+                        on_update(episode)
+                    update_queue.append(({
+                        'name': episode.name,
+                        'airdate': episode.airdate,
+                        'runtime': episode.runtime,
+                        'season': episode.season,
+                        'number': episode.number,
+                    }, matched_episode['id']))
+        db.insert_episodes(insert_queue)
+        db.update_episodes(update_queue)
+
     def show_follow(self, show_id: ShowId,
                     on_episode_insert: Union[Callable[[TVMazeEpisode], None], None] = None,
                     on_episode_update: Union[Callable[[TVMazeEpisode], None], None] = None,
@@ -55,8 +101,8 @@ class ShowtimeApp():
                 _show_id = transacted_db.add_show(show)
                 # add episodes to db
                 episodes = _get_episodes(self.api, _show_id)
-                transacted_db.sync_episodes(_show_id, episodes, on_insert=on_episode_insert,
-                                            on_update=on_episode_update)
+                self._sync_episodes(transacted_db, _show_id, episodes,
+                                    on_insert=on_episode_insert, on_update=on_episode_update)
                 if on_show_added:
                     on_show_added(show)
         return show
@@ -66,18 +112,37 @@ class ShowtimeApp():
         return self.database.get_show(show_id)
 
     def show_get_completed(self) -> List[Show]:
-        """Returns list of completed shows"""
-        return self.database.get_completed_shows()
+        """Returns all shows that have been completed"""
+        completed: Set[ShowId] = set()
+        partial: Set[ShowId] = set()
+        last_watched: Dict[ShowId, str] = {}
+        for episode in self.database.get_all_episodes():
+            show_id = ShowId(episode['show_id'])
+            if show_id in partial:
+                continue
+            if episode['watched'] == '':
+                partial.add(show_id)
+                if show_id in completed:
+                    completed.remove(show_id)
+                continue
+            if (not show_id in last_watched) or (last_watched[show_id] < episode['watched']):
+                last_watched[show_id] = episode['watched']
 
-    def episodes_update_all_watched(self, show_id: ShowId):
+            completed.add(show_id)
+        last_watched_list = sorted(last_watched.items(), key=lambda t: t[1])
+        show_order = [t[0] for t in last_watched_list]
+        shows = self.database.get_shows_by_ids(list(completed))
+        return sorted(shows, key=lambda row: show_order.index(row['id']))
+
+    def episodes_update_all_watched(self, show_id: ShowId, when: datetime):
         """Marks all show episodes as watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched_show(show_id, True)
+            return transacted_db.update_watched_show(show_id, True, when)
 
-    def episodes_update_all_not_watched(self, show_id: ShowId):
+    def episodes_update_all_not_watched(self, show_id: ShowId, when: datetime):
         """Marks all show episodes as not watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched_show(show_id, False)
+            return transacted_db.update_watched_show(show_id, False, when)
 
     def episodes_watched_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
         """Returns all watched episodes between two dates"""
@@ -96,19 +161,25 @@ class ShowtimeApp():
         with transaction(self.database) as transacted_db:
             shows = transacted_db.get_active_shows()
             for show in shows:
+                show_id = ShowId(show['id'])
                 if on_show_sync:
                     on_show_sync(show)
-                tv_maze_show = self.api.show_get(show['id'])
+                tv_maze_show = self.api.show_get(show_id)
                 if tv_maze_show:
-                    transacted_db.update_show(ShowId(show['id']), tv_maze_show)
-                    tv_maze_episodes = _get_episodes(self.api, show['id'])
-                    transacted_db.sync_episodes(show['id'], tv_maze_episodes,
-                                                on_insert=on_episode_insert, on_update=on_episode_update)
+                    transacted_db.update_show(show_id, tv_maze_show)
+                    tv_maze_episodes = _get_episodes(self.api, show_id)
+                    self._sync_episodes(transacted_db, show_id, tv_maze_episodes,
+                                        on_insert=on_episode_insert, on_update=on_episode_update)
 
     def episodes_patch_watchtime(self, file_name: str) -> None:
         """Patches episodes watch time from external file"""
-        with transaction(self.database) as transacted_db:
-            return transacted_db.update_watch_times(file_name)
+        with open(file_name, newline='', encoding='UTF-8') as csv_file:
+            reader = csv.reader(csv_file, delimiter=',')
+            with transaction(self.database) as transacted_db:
+                for row in reader:
+                    episode_id = EpisodeId(row[0])
+                    when = dateutil.parser.parse(row[1])
+                    transacted_db.update_watched(episode_id, True, when)
 
     def show_search_api(self, query: str) -> List[TVMazeShow]:
         """Searches tvmaze for showname"""
@@ -118,15 +189,15 @@ class ShowtimeApp():
         """Returns configuration"""
         return self.config
 
-    def episode_update_watched(self, episode_id: EpisodeId) -> None:
+    def episode_update_watched(self, episode_id: EpisodeId, when: datetime) -> int:
         """Marks episode as watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched(episode_id, True)
+            return transacted_db.update_watched(episode_id, True, when)
 
-    def episode_update_not_watched(self, episode_id: EpisodeId) -> None:
+    def episode_update_not_watched(self, episode_id: EpisodeId, when: datetime) -> int:
         """Marks episode as not watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched(episode_id, False)
+            return transacted_db.update_watched(episode_id, False, when)
 
     def episode_get_next_unwatched(self, show_id: ShowId) -> Optional[Episode]:
         """Returns the next episode from a show that has not been watched"""
@@ -137,27 +208,34 @@ class ShowtimeApp():
                     return episode
         return None
 
-    def episodes_update_season_watched(self, show_id: ShowId, season: int) -> None:
+    def episodes_update_season_watched(self, show_id: ShowId, season: int, when: datetime) -> int:
         """Marks all episodes from a season as watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched_show_season(ShowId(show_id), int(season), True)
+            return transacted_db.update_watched_show_season(ShowId(show_id), int(season), True, when)
 
-    def episodes_update_season_not_watched(self, show_id: ShowId, season: int) -> None:
+    def episodes_update_season_not_watched(self, show_id: ShowId, season: int, when: datetime) -> int:
         """Marks all episodes from a season as non watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.update_watched_show_season(show_id, season, False)
+            return transacted_db.update_watched_show_season(show_id, season, False, when)
 
-    def episodes_get_unwatched(self, when:Optional[datetime] = None) -> List[DecoratedEpisode]:
+    def episodes_get_unwatched(self, when: datetime) -> List[DecoratedEpisode]:
         """Returns list of unwatched episodes"""
-        current_datetime = when if when else datetime.utcnow()
-        episodes = self.database.get_unwatched(current_datetime)
+        episodes = self.database.get_unwatched(when)
         sorted_episodes = sorted(episodes, key=lambda episode: episode['airdate'] or '')
         return self._decorate_episodes(sorted_episodes)
 
-    def episodes_watched_to_last_seen(self, show_id:ShowId, season: int, episode: int) -> int:
+    def episodes_watched_to_last_seen(self, show_id: ShowId, season: int, episode_number: int, when: datetime) -> int:
         """Marks all episodes of a show until season/episode as watched"""
         with transaction(self.database) as transacted_db:
-            return transacted_db.last_seen(show_id, season, episode)
+            episodes = transacted_db.get_episodes(show_id)
+            episode_ids = []
+            for episode in episodes:
+                if episode['season'] > season:
+                    continue
+                if episode['season'] < season or (episode['season'] == season and episode['number'] <= episode_number):
+                    episode_ids.append(episode['id'])
+                    continue
+            return transacted_db.update_watched_episodes(episode_ids, True, when)
 
     def episode_get(self, episode_id: EpisodeId) -> Optional[Episode]:
         """Returns episode"""
@@ -169,7 +247,7 @@ class ShowtimeApp():
 
     def episodes_aired_unseen_between(self, from_date, to_date: date) -> List[DecoratedEpisode]:
         """Returns aired but not watched episodes between dates"""
-        episodes =  self.database.aired_unseen_between(from_date, to_date)
+        episodes = self.database.aired_unseen_between(from_date, to_date)
         return self._decorate_episodes(episodes)
 
     def episodes_get_watched(self) -> List[Episode]:

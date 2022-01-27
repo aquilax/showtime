@@ -1,5 +1,6 @@
 """Showtime Database Module Tests"""
 
+from datetime import datetime
 from showtime.database import get_memory_db, transaction
 from showtime.types import ShowStatus, TVMazeShow, TVMazeEpisode
 
@@ -44,26 +45,6 @@ def test_get_active_shows():
     assert active[0]['name'] == "show 1"
 
 
-def test_last_seen():
-    show1 = get_tv_maze_show(name="show 1")
-    episode1 = get_tv_maze_episode(id=1, name="episode1", number=1)
-    episode2 = get_tv_maze_episode(id=2, name="episode2", number=2)
-    episode3 = get_tv_maze_episode(id=3, name="episode3", number=3)
-    with get_memory_db() as database:
-        with transaction(database) as transacted_db:
-            show_id = database.add_show(show1)
-            transacted_db.add_episode(show_id, episode1)
-            transacted_db.add_episode(show_id, episode2)
-            transacted_db.add_episode(show_id, episode3)
-        database.last_seen(show_id, 1, 2)
-        episodes = database.get_episodes(show_id)
-
-    assert len(episodes) == 3
-    assert episodes[0]['watched'] != ''
-    assert episodes[1]['watched'] != ''
-    assert episodes[2]['watched'] == ''  # last episode is not watched
-
-
 def test_watch():
     show1 = get_tv_maze_show(name="show 1")
     episode1 = get_tv_maze_episode(id=1, name="episode1", number=1)
@@ -74,9 +55,9 @@ def test_watch():
             transacted_db.add_episode(show_id, episode1)
             transacted_db.add_episode(show_id, episode2)
         with transaction(database) as transacted_db:
-            transacted_db.update_watched(1, True)
+            transacted_db.update_watched(1, True, datetime(2020, 1, 1, 1, 0))
         episode1db = database.get_episode(1)
         with transaction(database) as transacted_db:
-            transacted_db.update_watched(2, True)
+            transacted_db.update_watched(2, True, datetime(2020, 1, 1, 1, 1))
         episode2db = database.get_episode(2)
     assert episode1db['watched'] != episode2db['watched']

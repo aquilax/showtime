@@ -53,9 +53,11 @@ class Output():
             name=episode.name, airdate=episode.airdate))
 
     def status_on_show_added(self, show: TVMazeShow) -> None:
+        """Prints status when show is added"""
         self.poutput(f"Added show: ({show.id}) {show.name} - {show.premiered}")
 
     def status_on_show_sync(self, show: Show) -> None:
+        """Prints status when show is synced"""
         self.poutput(f"{show['id']}\t{show['name']} ({show['premiered']})")
 
     def format_search_results(self, search_result: List[TVMazeShow]) -> str:
@@ -155,20 +157,27 @@ class Output():
         """formats list of completed shows as a table"""
         data = []
         data.append([
+            '#',
             'ID',
             'Name',
             'Premiered',
             'Status'
         ])
+        i = 0
         for show in shows:
             data.append([
+                str(i+1),
                 str(show['id']),
                 show['name'],
                 show['premiered'],
                 show['status'],
             ])
+            i = i + 1
         title = 'Completed shows'
-        return str(Table(data, title=title).table)
+        table = Table(data, title=title)
+        table.justify_columns[0] = 'right'
+        table.justify_columns[1] = 'right'
+        return str(table.table)
 
     def summary_table(self, month_totals: Dict[str, Dict[str, int]]) -> str:
         """Formats summary as a table"""

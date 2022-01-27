@@ -36,7 +36,7 @@ setup(
     ],
     install_requires=[
         'cmd2==2.3.3',
-        'python-tvmaze==1.0.1',
+        'urllib3==1.26.8',
         'ratelimit==2.2.1',
         'tinydb==4.6.1',
         'terminaltables==3.1.10',
