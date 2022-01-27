@@ -1,3 +1,7 @@
+v0.3.16
+
+* Fix for bad database query
+
 v0.3.15
 
 * Refactoring and switch to lower-level API client
