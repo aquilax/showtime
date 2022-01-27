@@ -1,3 +1,7 @@
+v0.3.15
+
+* Refactoring and switch to lower-level API client
+
 v0.3.14
 
 * Fixes watch-time initialization bug
