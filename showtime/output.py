@@ -198,3 +198,7 @@ class Output():
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
         return str(table.table)
+
+    def episodes_json(self, episodes: List[DecoratedEpisode]) -> str:
+        """Formats decorated episodes as json"""
+        return json.dumps(episodes, sort_keys=True, indent=4)

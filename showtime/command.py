@@ -276,9 +276,14 @@ class Showtime(Cmd):
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watched_between(self, statement: Statement) -> None:
-        """Export seen episodes between dates[export <from_date> <to_date>]"""
+        """Export seen episodes between dates[watched_between <from_date> <to_date> <format>]"""
         try:
-            from_date_s, to_date_s = statement.split(' ')
+            format = 'table'
+            split_arg = statement.split(' ')
+            if len(split_arg) < 3:
+                from_date_s, to_date_s = split_arg
+            else:
+                from_date_s, to_date_s, format = split_arg
             from_date = dateutil.parser.parse(from_date_s).date()
             to_date = dateutil.parser.parse(to_date_s).date()
 
@@ -288,8 +293,11 @@ class Showtime(Cmd):
 
         episodes = self.app.episodes_watched_between(from_date, to_date)
         sorted_episodes = sorted(episodes, key=lambda k: k['watched'])
-        episodes_table = self.output.format_unwatched(sorted_episodes)
-        self.output.ppaged(episodes_table)
+        if format == 'json':
+            episodes_output = self.output.episodes_json(sorted_episodes)
+        else:
+            episodes_output = self.output.format_unwatched(sorted_episodes)
+        self.output.ppaged(episodes_output)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_new_unwatched(self, statement: Statement) -> None:
