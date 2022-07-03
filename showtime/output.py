@@ -95,6 +95,7 @@ class Output():
             'S',
             'E',
             'Name',
+            'Runtime',
             'Aired',
             'Watched'
         ])
@@ -104,6 +105,7 @@ class Output():
                 'S{season:0>2}'.format(season=episode['season']),
                 'E{episode:0>2}'.format(episode=episode['number']),
                 episode['name'],
+                str(episode['runtime']),
                 episode['airdate'],
                 episode['watched']
             ])
