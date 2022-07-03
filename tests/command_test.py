@@ -77,11 +77,11 @@ def test_episodes(test_app):
     test_app.app.episodes_get.assert_called_with(1)
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+------------+---------+
-| ID | S   | E   | Name              | Aired      | Watched |
-+----+-----+-----+-------------------+------------+---------+
-| 1  | S01 | E01 | The first episode | 2020-01-01 |         |
-+----+-----+-----+-------------------+------------+---------+
++(1) test-show - 2020-01-01----------+---------+------------+---------+
+| ID | S   | E   | Name              | Runtime | Aired      | Watched |
++----+-----+-----+-------------------+---------+------------+---------+
+| 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
++----+-----+-----+-------------------+---------+------------+---------+
 """.strip()
     assert out.data is None
 
@@ -152,11 +152,11 @@ def test_next(test_app):
     test_app.app.episode_get_next_unwatched.assert_called_once_with(1)
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+------------+---------+
-| ID | S   | E   | Name              | Aired      | Watched |
-+----+-----+-----+-------------------+------------+---------+
-| 1  | S01 | E01 | The first episode | 2020-01-01 |         |
-+----+-----+-----+-------------------+------------+---------+
++(1) test-show - 2020-01-01----------+---------+------------+---------+
+| ID | S   | E   | Name              | Runtime | Aired      | Watched |
++----+-----+-----+-------------------+---------+------------+---------+
+| 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
++----+-----+-----+-------------------+---------+------------+---------+
 Did you watch this episode [Y/n]:
 """.strip()
     assert out.data is None
@@ -172,11 +172,11 @@ def test_delete(test_app):
     test_app.app.show_get.assert_called_with(1)
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+------------+---------+
-| ID | S   | E   | Name              | Aired      | Watched |
-+----+-----+-----+-------------------+------------+---------+
-| 1  | S01 | E01 | The first episode | 2020-01-01 |         |
-+----+-----+-----+-------------------+------------+---------+
++(1) test-show - 2020-01-01----------+---------+------------+---------+
+| ID | S   | E   | Name              | Runtime | Aired      | Watched |
++----+-----+-----+-------------------+---------+------------+---------+
+| 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
++----+-----+-----+-------------------+---------+------------+---------+
 Do you want to delete this episode [y/N]:
 """.strip()
     assert out.data is None
