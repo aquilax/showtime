@@ -50,5 +50,3 @@ quiet = false
 
 [tool.mypy]
 plugins = "tinydb.mypy_plugin"
-ignore_missing_imports = true
-
