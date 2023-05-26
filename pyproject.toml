@@ -14,7 +14,7 @@ max_line_length = 120
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py39,mypy,doc
+envlist = py311,mypy,doc
 [testenv]
 deps =
     pytest
@@ -50,3 +50,5 @@ quiet = false
 
 [tool.mypy]
 plugins = "tinydb.mypy_plugin"
+ignore_missing_imports = true
+

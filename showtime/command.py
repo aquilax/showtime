@@ -66,7 +66,7 @@ class Showtime(Cmd):
                     return ShowId(shows[0]['id'])
                 if len(shows) > 1:
                     select_list: List[Tuple[Any, Optional[str]]] = [(show['id'], show['name']) for show in shows]
-                    return ShowId(self.select(select_list, 'Please select one:'))
+                    return ShowId(self.select(select_list, 'Please select one: '))
         if self.current_show:
             return ShowId(self.current_show['id'])
         raise Exception('Please provide a show_id')
