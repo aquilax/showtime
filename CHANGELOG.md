@@ -1,3 +1,8 @@
+v0.3.19
+
+* Bumped dependencies
+* Fixed Linting errors
+
 v0.3.16
 
 * Fix for bad database query
