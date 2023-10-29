@@ -12,12 +12,12 @@ tv_maze_show = TVMazeShow(
 def get_tv_maze_episode(id=1, name="The first episode", airdate="2020-01-01",
                         runtime=60, season=1, number=1):
     return TVMazeEpisode(id=id,
-                           name=name,
-                           airdate=airdate,
-                           runtime=runtime,
-                           season=season,
-                           number=number,
-                           )
+                         name=name,
+                         airdate=airdate,
+                         runtime=runtime,
+                         season=season,
+                         number=number,
+                         )
 
 
 tv_maze_episode = TVMazeEpisode(

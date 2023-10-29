@@ -71,91 +71,112 @@ def test_watch():
 def test_database() -> Database:
     return get_memory_db()
 
+
 def test_flush(test_database):
     result = test_database.flush()
     assert result is None
+
 
 def test_add_show(test_database):
     result = test_database.add_show(tv_maze_show)
     assert result == 1
 
+
 def test_update_show(test_database):
     result = test_database.update_show(1, tv_maze_show)
     assert result == []
+
 
 def test_add_episode(test_database):
     result = test_database.add_episode(1, tv_maze_episode)
     assert result == 1
 
+
 def test_get_shows(test_database):
     result = test_database.get_shows()
     assert result == []
+
 
 def test_get_active_shows(test_database):
     result = test_database.get_active_shows()
     assert result == []
 
+
 def test_get_show(test_database):
     result = test_database.get_show(1)
     assert result is None
+
 
 def test_get_episode(test_database):
     result = test_database.get_episode(1)
     assert result is None
 
+
 def test_delete_episode(test_database):
     result = test_database.delete_episode(1)
     assert result == []
+
 
 def test_insert_episodes(test_database):
     result = test_database.insert_episodes([episode])
     assert result == [1]
 
+
 def test_update_episodes(test_database):
     result = test_database.update_episodes([(episode, 1)])
     assert result == []
+
 
 def test_update_watched(test_database):
     result = test_database.update_watched(1, True, datetime(2021, 1, 1, 1))
     assert result == []
 
+
 def test_update_watched_episodes(test_database):
     result = test_database.update_watched([1], True, datetime(2021, 1, 1, 1))
     assert result == []
+
 
 def test_update_watched_show(test_database):
     result = test_database.update_watched_show(1, True, datetime(2021, 1, 1, 1))
     assert result == []
 
+
 def test_update_watched_show_season(test_database):
     result = test_database.update_watched_show_season(1, 1, True, datetime(2021, 1, 1, 1))
     assert result == []
+
 
 def test_get_episodes(test_database):
     result = test_database.get_episodes(1)
     assert result == []
 
+
 def test_get_unwatched(test_database):
     result = test_database.get_unwatched(datetime(2021, 1, 1, 1))
     assert result == []
+
 
 def test_seen_between(test_database):
     result = test_database.seen_between(datetime(2021, 1, 1, 1), datetime(2022, 1, 1, 1))
     assert result == []
 
+
 def test_aired_unseen_between(test_database):
     result = test_database.aired_unseen_between(datetime(2021, 1, 1, 1), datetime(2022, 1, 1, 1))
     assert result == []
+
 
 def test_get_watched_episodes(test_database):
     result = test_database.get_watched_episodes()
     assert result == []
 
+
 def test_get_all_episodes(test_database):
     result = test_database.get_all_episodes()
     assert list(result) == []
 
+
 def test_get_shows_by_ids(test_database):
     result = test_database.get_shows_by_ids([1])
     assert result == []
-

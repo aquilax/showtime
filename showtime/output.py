@@ -3,12 +3,13 @@
 import json
 from typing import Callable, Dict, List
 
-from terminaltables import AsciiTable as Table # type: ignore
+from terminaltables import AsciiTable as Table  # type: ignore
 
 from showtime.types import (DecoratedEpisode, Episode, Show, TVMazeEpisode,
                             TVMazeShow)
 
 PrintFunction = Callable[[str], None]
+
 
 class Output():
     """Output handler"""
@@ -42,11 +43,13 @@ class Output():
 
     def status_on_episode_insert(self, episode: TVMazeEpisode) -> None:
         """Prints status message when new episode is added"""
-        self.poutput(f"\tAdding new episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
+        self.poutput(
+            f"\tAdding new episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
 
     def status_on_episode_update(self, episode: TVMazeEpisode) -> None:
         """Prints status message when an episode is updated"""
-        self.poutput(f"\tUpdating episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
+        self.poutput(
+            f"\tUpdating episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
 
     def status_on_show_added(self, show: TVMazeShow) -> None:
         """Prints status when show is added"""

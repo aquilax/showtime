@@ -19,6 +19,7 @@ def episode_to_model(episode: Dict) -> TVMazeEpisode:
         runtime=episode['runtime'],
     )
 
+
 def show_to_model(show: Dict) -> TVMazeShow:
     return TVMazeShow(
         id=show['id'],

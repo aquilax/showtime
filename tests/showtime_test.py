@@ -250,6 +250,7 @@ def test_show_follow(test_app):
     }, 1)])
     assert result == None
 
+
 def test_sync(test_app):
     result = test_app.episodes_get_watched()
 

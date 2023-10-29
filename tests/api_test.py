@@ -9,6 +9,7 @@ from showtime.api import Api
 def get_response(data: str):
     return SimpleNamespace(data=data.encode('utf-8'))
 
+
 @pytest.fixture
 def test_api() -> Api:
     http = Mock()

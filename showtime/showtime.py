@@ -21,10 +21,10 @@ def _get_episodes(api: Api, show_id: ShowId) -> List[TVMazeEpisode]:
 
 def needs_update(episode: Episode, tv_maze_episode: TVMazeEpisode):
     return (episode['name'] != tv_maze_episode.name or
-        episode['airdate'] != tv_maze_episode.airdate or
-        episode['runtime'] != tv_maze_episode.runtime or
-        episode['season'] != tv_maze_episode.season or
-        episode['number'] != tv_maze_episode.number)
+            episode['airdate'] != tv_maze_episode.airdate or
+            episode['runtime'] != tv_maze_episode.runtime or
+            episode['season'] != tv_maze_episode.season or
+            episode['number'] != tv_maze_episode.number)
 
 
 class ShowtimeApp():
