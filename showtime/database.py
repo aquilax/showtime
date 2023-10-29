@@ -2,8 +2,7 @@
 
 from contextlib import contextmanager
 from datetime import date, datetime
-from typing import (Iterable, Iterator, Tuple, Callable, Dict, Generator, List, Literal, Optional, Set,
-                    cast)
+from typing import (Iterator, Tuple, Dict, Generator, List,  Optional, cast)
 
 import dateutil.parser
 from tinydb import TinyDB, where
@@ -29,6 +28,7 @@ class Database(TinyDB):
     """Class for locally storing the showtime data"""
 
     def flush(self):
+        """Flushes the storage content to disk"""
         if hasattr(self.storage, 'flush'):
             self.storage.flush()
 

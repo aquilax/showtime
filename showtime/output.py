@@ -41,16 +41,12 @@ class Output():
         self.feedback_function(output)
 
     def status_on_episode_insert(self, episode: TVMazeEpisode) -> None:
-        """Prints status messsage when new episode is added"""
-        self.poutput('\tAdding new episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
-            season=episode.season, episode=episode.number, id=episode.id,
-            name=episode.name, airdate=episode.airdate))
+        """Prints status message when new episode is added"""
+        self.poutput(f"\tAdding new episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
 
     def status_on_episode_update(self, episode: TVMazeEpisode) -> None:
-        """Prints status messsage when an episode is updated"""
-        self.poutput('\tUpdating episode: S{season:0>2} E{episode:0>2} ({id}) {name} - {airdate}'.format(
-            season=episode.season, episode=episode.number, id=episode.id,
-            name=episode.name, airdate=episode.airdate))
+        """Prints status message when an episode is updated"""
+        self.poutput(f"\tUpdating episode: S{episode.season:0>2} E{episode.number:0>2} ({episode.id}) {episode.name} - {episode.airdate}")
 
     def status_on_show_added(self, show: TVMazeShow) -> None:
         """Prints status when show is added"""
@@ -82,8 +78,7 @@ class Output():
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""
-        title = '({id}) {name} - {premiered}'.format(
-                id=show['id'], name=show['name'], premiered=show['premiered'])
+        title = f"({show['id']}) {show['name']} - {show['premiered']}"
         data = self._get_episodes_data(episodes)
         return str(Table(data, title=title).table)
 
@@ -102,8 +97,8 @@ class Output():
         for episode in episodes:
             data.append([
                 str(episode['id']),
-                'S{season:0>2}'.format(season=episode['season']),
-                'E{episode:0>2}'.format(episode=episode['number']),
+                f"S{episode['season']:0>2}",
+                f"E{episode['number']:0>2}",
                 episode['name'],
                 str(episode['runtime']),
                 episode['airdate'],
@@ -127,8 +122,8 @@ class Output():
             data.append([
                 str(episode['id']),
                 episode['show_name'],
-                'S{season:0>2}'.format(season=episode['season']),
-                'E{episode:0>2}'.format(episode=episode['number']),
+                f"S{episode['season']:0>2}",
+                f"E{episode['number']:0>2}",
                 episode['name'],
                 episode['airdate'],
                 episode['watched']

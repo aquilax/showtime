@@ -278,12 +278,12 @@ class Showtime(Cmd):
     def do_watched_between(self, statement: Statement) -> None:
         """Export seen episodes between dates[watched_between <from_date> <to_date> <format>]"""
         try:
-            format = 'table'
+            output_format = 'table'
             split_arg = statement.split(' ')
             if len(split_arg) < 3:
                 from_date_s, to_date_s = split_arg
             else:
-                from_date_s, to_date_s, format = split_arg
+                from_date_s, to_date_s, output_format = split_arg
             from_date = dateutil.parser.parse(from_date_s).date()
             to_date = dateutil.parser.parse(to_date_s).date()
 
@@ -293,7 +293,7 @@ class Showtime(Cmd):
 
         episodes = self.app.episodes_watched_between(from_date, to_date)
         sorted_episodes = sorted(episodes, key=lambda k: k['watched'])
-        if format == 'json':
+        if output_format == 'json':
             episodes_output = self.output.episodes_json(sorted_episodes)
         else:
             episodes_output = self.output.format_unwatched(sorted_episodes)
@@ -319,7 +319,7 @@ class Showtime(Cmd):
         self.output.poutput(__version__)
 
     def do_patch_watchtime(self, file_name: Statement) -> None:
-        """Update watchtimes from csv file"""
+        """Update watch times from csv file"""
         self.app.episodes_patch_watchtime(file_name)
 
     def do_watching_stats(self, _: Statement) -> None:
@@ -328,17 +328,17 @@ class Showtime(Cmd):
         minutes = reduce(
             (lambda acc, ep: acc + ep['runtime'] if ep['runtime'] else 0), watched, 0)
 
-        def month_groupper(acc: Dict[str, Dict[str, int]], episode: Episode) -> Dict[str, Dict[str, int]]:
+        def month_grouper(acc: Dict[str, Dict[str, int]], episode: Episode) -> Dict[str, Dict[str, int]]:
             """Groups watched episodes by month"""
-            date = episode['watched'][0:7]
+            month = episode['watched'][0:7]
             runtime = episode['runtime'] if episode['runtime'] else 0
-            if not date in acc:
-                acc[date] = {'episodes': 0, 'minutes': 0}
-            acc[date]['episodes'] = acc[date]['episodes'] + 1
-            acc[date]['minutes'] = acc[date]['minutes'] + runtime
+            if not month in acc:
+                acc[month] = {'episodes': 0, 'minutes': 0}
+            acc[month]['episodes'] = acc[month]['episodes'] + 1
+            acc[month]['minutes'] = acc[month]['minutes'] + runtime
             return acc
 
-        month_totals: Dict[str, Dict[str, int]] = reduce(month_groupper, watched, {})
+        month_totals: Dict[str, Dict[str, int]] = reduce(month_grouper, watched, {})
         self.output.poutput(f"Total watched episodes: {len(watched)}")
         self.output.poutput(f"Total watchtime in minutes: {minutes}")
         summary_table = self.output.summary_table(month_totals)
@@ -349,7 +349,7 @@ def main() -> None:
     api = Api(get_default_pool_manager())
     config = Config()
     config.load()
-    dry_run = os.getenv('SHOWTIME_DRY_RUN') != None
+    dry_run = os.getenv('SHOWTIME_DRY_RUN') is not None
     database_filename = config.get('Database', 'Path')
     database = get_memory_db() if dry_run else get_cashed_write_db(database_filename)
     app = ShowtimeApp(api, database, config)

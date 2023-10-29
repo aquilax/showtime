@@ -53,7 +53,8 @@ class ShowtimeApp():
             shows = [s for s in shows if query in s['name'].lower()]
         return sorted(shows, key=lambda k: k['name'])
 
-    def _sync_episodes(self, db: Database, show_id: ShowId, tv_maze_episodes: List[TVMazeEpisode],                      on_insert: Optional[Callable[[TVMazeEpisode], None]] = None,
+    def _sync_episodes(self, db: Database, show_id: ShowId, tv_maze_episodes: List[TVMazeEpisode],
+                       on_insert: Optional[Callable[[TVMazeEpisode], None]] = None,
                        on_update: Optional[Callable[[TVMazeEpisode], None]] = None):
         """Synchronizes followed shows data with the upstream api"""
         insert_queue = []
@@ -125,7 +126,7 @@ class ShowtimeApp():
                 if show_id in completed:
                     completed.remove(show_id)
                 continue
-            if (not show_id in last_watched) or (last_watched[show_id] < episode['watched']):
+            if (show_id not in last_watched) or (last_watched[show_id] < episode['watched']):
                 last_watched[show_id] = episode['watched']
 
             completed.add(show_id)
@@ -182,7 +183,7 @@ class ShowtimeApp():
                     transacted_db.update_watched(episode_id, True, when)
 
     def show_search_api(self, query: str) -> List[TVMazeShow]:
-        """Searches tvmaze for showname"""
+        """Searches tvmaze for show name"""
         return self.api.show_search(query)
 
     def config_get(self) -> Config:
@@ -224,7 +225,8 @@ class ShowtimeApp():
         sorted_episodes = sorted(episodes, key=lambda episode: episode['airdate'] or '')
         return self._decorate_episodes(sorted_episodes)
 
-    def episodes_watched_to_last_seen(self, show_id: ShowId, season: int, episode_number: int, when: datetime) -> List[int]:
+    def episodes_watched_to_last_seen(self, show_id: ShowId, season: int,
+                                      episode_number: int, when: datetime) -> List[int]:
         """Marks all episodes of a show until season/episode as watched"""
         with transaction(self.database) as transacted_db:
             episodes = transacted_db.get_episodes(show_id)

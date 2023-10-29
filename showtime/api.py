@@ -1,8 +1,8 @@
 """API client module"""
 
-import urllib3
 import json
 from typing import Dict, List, Optional
+import urllib3
 
 from showtime.types import ShowId, TVMazeEpisode, TVMazeShow
 
