@@ -152,7 +152,18 @@ class Showtime(Cmd):
         self.output.pfeedback('Syncing shows...')
         self.app.sync(on_show_sync=self.output.status_on_show_sync,
                       on_episode_insert=self.output.status_on_episode_insert,
-                      on_episode_update=self.output.status_on_episode_update)
+                      on_episode_update=self.output.status_on_episode_update,
+                      all=False)
+        self.output.pfeedback('Done')
+
+    @cmd2.with_category(EPISODE_CATEGORY)
+    def do_sync_all(self, _: Statement) -> None:
+        """Synchronize episodes with TVMaze [sync]"""
+        self.output.pfeedback('Syncing shows...')
+        self.app.sync(on_show_sync=self.output.status_on_show_sync,
+                      on_episode_insert=self.output.status_on_episode_insert,
+                      on_episode_update=self.output.status_on_episode_update,
+                      all=True)
         self.output.pfeedback('Done')
 
     @cmd2.with_category(EPISODE_CATEGORY)

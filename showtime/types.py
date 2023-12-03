@@ -1,7 +1,7 @@
 """Showtime Types Module"""
 
 from enum import Enum
-from typing import NamedTuple
+from typing import NamedTuple, Dict
 from typing_extensions import TypedDict
 
 ShowId = int
@@ -16,6 +16,7 @@ class TVMazeShow(NamedTuple):
     premiered: str
     status: str
     url: str
+    externals: Dict
 
 
 class TVMazeEpisode(NamedTuple):
@@ -42,6 +43,7 @@ class Show(TypedDict):
     name: str
     premiered: Date
     status: str
+    externals: Dict
 
 
 class Episode(TypedDict):

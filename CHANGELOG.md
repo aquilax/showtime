@@ -1,3 +1,7 @@
+v0.3.20
+
+* Added external references
+
 v0.3.19
 
 * Bumped dependencies
