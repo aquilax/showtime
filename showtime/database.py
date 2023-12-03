@@ -39,7 +39,8 @@ class Database(TinyDB):
                 'id': tv_maze_show.id,
                 'name': tv_maze_show.name,
                 'premiered': tv_maze_show.premiered,
-                'status': tv_maze_show.status
+                'status': tv_maze_show.status,
+                'externals': tv_maze_show.externals,
             })
         return ShowId(tv_maze_show.id)
 
@@ -48,7 +49,8 @@ class Database(TinyDB):
         return self.table(SHOW).update({
             'name': tv_maze_show.name,
             'premiered': tv_maze_show.premiered,
-            'status': tv_maze_show.status
+            'status': tv_maze_show.status,
+            'externals': tv_maze_show.externals,
         }, where('id') == show_id)
 
     def add_episode(self, show_id: ShowId, episode: TVMazeEpisode) -> EpisodeId:

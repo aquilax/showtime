@@ -5,7 +5,8 @@ tv_maze_show = TVMazeShow(
     name="test-show",
     premiered="2020-01-01",
     status="Ended",
-    url="https:/www.example.com/1"
+    url="https:/www.example.com/1",
+    externals={"tmdb": "111"}
 )
 
 

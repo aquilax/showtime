@@ -26,7 +26,8 @@ def show_to_model(show: Dict) -> TVMazeShow:
         name=show['name'],
         premiered=show['premiered'],
         status=show['status'],
-        url=show['url']
+        url=show['url'],
+        externals=show['externals']
     )
 
 

@@ -47,7 +47,8 @@ def test_show_get(test_api):
     "name": "test-show",
     "premiered": "2020-01-01",
     "status": "Ended",
-    "url": "https:/www.example.com/1"
+    "url": "https:/www.example.com/1",
+    "externals":{"tmdb": "111"}
 }
 """)
     test_api.http.request = MagicMock(return_value=response)
@@ -66,7 +67,8 @@ def test_show_search(test_api):
         "name": "test-show",
         "premiered": "2020-01-01",
         "status": "Ended",
-        "url": "https:/www.example.com/1"
+        "url": "https:/www.example.com/1",
+        "externals":{"tmdb": "111"}
     }
 ]
 """)

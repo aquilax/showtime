@@ -9,8 +9,8 @@ from showtime.types import ShowStatus, TVMazeShow, TVMazeEpisode
 from helpers import decorated_episode, episode, show, tv_maze_show, tv_maze_episode
 
 
-def get_tv_maze_show(id=1, name="show", premiered="2020", status="great", url="http://example.com") -> TVMazeShow:
-    return TVMazeShow(id=id, name=name, premiered=premiered, status=status, url=url)
+def get_tv_maze_show(id=1, name="show", premiered="2020", status="great", url="http://example.com", externals={"tmdb": "111"}) -> TVMazeShow:
+    return TVMazeShow(id=id, name=name, premiered=premiered, status=status, url=url, externals=externals)
 
 
 def get_tv_maze_episode(id=1, season=1, number=1, name="episode1", airdate="2020-10-10", runtime=30) -> TVMazeEpisode:

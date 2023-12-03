@@ -157,10 +157,12 @@ class ShowtimeApp():
     def sync(self,
              on_show_sync: Union[Callable[[Show], None], None] = None,
              on_episode_insert: Union[Callable[[TVMazeEpisode], None], None] = None,
-             on_episode_update: Union[Callable[[TVMazeEpisode], None], None] = None):
+             on_episode_update: Union[Callable[[TVMazeEpisode], None], None] = None,
+             all=False):
         """Updates episode information for followed shows from tvmaze"""
         with transaction(self.database) as transacted_db:
-            shows = transacted_db.get_active_shows()
+            shows = transacted_db.get_shows() if all else transacted_db.get_active_shows()
+
             for show in shows:
                 show_id = ShowId(show['id'])
                 if on_show_sync:
