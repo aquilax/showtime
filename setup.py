@@ -38,7 +38,7 @@ setup(
         'cmd2==2.4.3',
         'urllib3==2.2.3',
         'ratelimit==2.2.1',
-        'tinydb==4.8.1',
+        'tinydb==4.8.2',
         'terminaltables==3.1.10',
         'python-dateutil==2.9.0.post0',
         'typing-extensions==4.12.2',
