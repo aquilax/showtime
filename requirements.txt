@@ -1,4 +1,4 @@
-cmd2==2.5.4
+cmd2==2.5.5
 urllib3==2.2.3
 ratelimit==2.2.1
 tinydb==4.8.2
