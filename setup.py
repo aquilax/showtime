@@ -36,7 +36,7 @@ setup(
     ],
     install_requires=[
         'cmd2==2.5.11',
-        'urllib3==2.2.3',
+        'urllib3==2.5.0',
         'ratelimit==2.2.1',
         'tinydb==4.8.2',
         'terminaltables==3.1.10',
