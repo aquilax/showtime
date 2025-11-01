@@ -6,7 +6,7 @@ from typing import Callable, Dict, List
 from terminaltables import AsciiTable as Table  # type: ignore
 
 from showtime.types import (DecoratedEpisode, Episode, Show, TVMazeEpisode,
-                            TVMazeShow)
+                            TVMazeShow, ShowWithCount)
 
 PrintFunction = Callable[[str], None]
 
@@ -151,6 +151,29 @@ class Output():
                 show['status'],
             ])
         title = 'Followed shows'
+        return str(Table(data, title=title).table)
+
+    def unfinished_shows_table(self, shows: List[ShowWithCount]) -> str:
+        """formats list of shows with episodes count as a table"""
+        data = []
+        data.append([
+            'ID',
+            'Name',
+            'Premiered',
+            'Status',
+            'Episodes',
+            'Watched'
+        ])
+        for show in shows:
+            data.append([
+                str(show['id']),
+                show['name'],
+                show['premiered'],
+                show['status'],
+                str(show['total']),
+                str(show['seen']),
+            ])
+        title = 'Unfinished shows'
         return str(Table(data, title=title).table)
 
     def completed_shows_table(self, shows: List[Show]) -> str:

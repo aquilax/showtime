@@ -11,7 +11,7 @@ from tinydb.queries import QueryLike
 from tinydb.storages import JSONStorage, MemoryStorage
 
 from showtime.types import (Episode, EpisodeId, Show, ShowId, ShowStatus,
-                            TVMazeEpisode, TVMazeShow)
+                            TVMazeEpisode, TVMazeShow, ShowWithCount)
 
 SHOW = 'show'
 EPISODE = 'episode'
@@ -153,6 +153,22 @@ class Database(TinyDB):
         """Returns list of shows given list of show id-s"""
         shows = self.table(SHOW).search(where('id').one_of(show_ids))
         return cast(List[Show], shows)
+
+    def _get_shows_episodes_totals(self) -> List[ShowWithCount]:
+        all_shows = [{**show, 'total': 0, 'seen': 0} for show in self.table(SHOW)]
+        all_shows_keyed = {show['id']: show for show in all_shows}
+        for episode in self.table(EPISODE):
+            show_id = episode['show_id']
+            all_shows_keyed[show_id]['total'] += 1
+            if episode['watched'] != '':
+                all_shows_keyed[show_id]['seen'] += 1
+        return cast(List[ShowWithCount], all_shows_keyed.values())
+
+    def get_unfinished_shows(self) -> List[ShowWithCount]:
+        """Returns list of unfinished shows"""
+        all_shows_totals = self._get_shows_episodes_totals()
+        unfinished_shows = [show for show in all_shows_totals if show['total'] > show['seen']]
+        return sorted(unfinished_shows, key=lambda item: item['premiered'] or "")
 
 
 def get_direct_write_db(file_name: str) -> Database:

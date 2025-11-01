@@ -8,7 +8,7 @@ from ratelimit import limits, sleep_and_retry
 from showtime.api import Api
 from showtime.config import Config
 from showtime.database import Database, transaction, NOT_WATCHED_VALUE
-from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId,
+from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId, ShowWithCount,
                             TVMazeEpisode, TVMazeShow)
 
 
@@ -257,3 +257,7 @@ class ShowtimeApp():
     def episodes_get_watched(self) -> List[Episode]:
         """Returns all watched episodes"""
         return self.database.get_watched_episodes()
+
+    def show_get_unfinished(self) -> List[ShowWithCount]:
+        """Returns list of unfinished shows"""
+        return self.database.get_unfinished_shows()
