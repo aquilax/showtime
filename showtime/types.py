@@ -46,6 +46,12 @@ class Show(TypedDict):
     externals: Dict
 
 
+class ShowWithCount(Show):
+    """DB Show with episode counts"""
+    total: int
+    seen: int
+
+
 class Episode(TypedDict):
     """DB Episode"""
     id: EpisodeId

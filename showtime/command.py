@@ -355,6 +355,13 @@ class Showtime(Cmd):
         summary_table = self.output.summary_table(month_totals)
         self.output.ppaged(summary_table)
 
+    @cmd2.with_category(SHOW_CATEGORY)
+    def do_unfinished(self, _: Statement) -> None:
+        """Show list of unfinished shows"""
+        unfinished_shows = self.app.show_get_unfinished()
+        unfinished_shows_table = self.output.unfinished_shows_table(unfinished_shows)
+        self.output.ppaged(unfinished_shows_table)
+
 
 def main() -> None:
     api = Api(get_default_pool_manager())

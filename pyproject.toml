@@ -13,26 +13,29 @@ max_line_length = 120
 
 [tool.tox]
 legacy_tox_ini = """
-[tox]
-envlist = py311,mypy,doc
-[testenv]
-deps =
-    pytest
-    pytest-cov
-    cmd2_ext_test
-commands = pytest
-[testenv:mypy]
-deps =
-    mypy
-    ratelimit-stubs
-    types-python-dateutil
-    types-requests
-    types-urllib3
-commands = mypy -p showtime
-[testenv:doc]
-deps = interrogate
-skip_install = true
-commands = interrogate --quiet --fail-under 80 showtime
+    [tox]
+    env_list = py311,mypy,doc
+
+    [testenv]
+    deps =
+        pytest
+        pytest-cov
+        cmd2_ext_test
+    commands = pytest
+
+    [testenv:mypy]
+    deps =
+        mypy
+        ratelimit-stubs
+        types-python-dateutil
+        types-requests
+        types-urllib3
+    commands = mypy -p showtime
+
+    [testenv:doc]
+    deps = interrogate
+    skip_install = true
+    commands = interrogate --quiet --fail-under 80 showtime
 """
 
 [tool.interrogate]
