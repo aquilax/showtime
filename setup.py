@@ -41,7 +41,7 @@ setup(
         'tinydb==4.8.2',
         'terminaltables==3.1.10',
         'python-dateutil==2.9.0.post0',
-        'typing-extensions==4.12.2',
+        'typing-extensions==4.15.0',
     ],
     extras_require={
         'test': ['tox'],
