@@ -162,7 +162,8 @@ class Output():
             'Premiered',
             'Status',
             'Episodes',
-            'Watched'
+            'Watched',
+            'Unwatched',
         ])
         for show in shows:
             data.append([
@@ -172,6 +173,7 @@ class Output():
                 show['status'],
                 str(show['total']),
                 str(show['seen']),
+                str(show['total']-show['seen'])
             ])
         title = 'Unfinished shows'
         return str(Table(data, title=title).table)

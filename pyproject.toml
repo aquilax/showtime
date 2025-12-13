@@ -29,7 +29,6 @@ legacy_tox_ini = """
         ratelimit-stubs
         types-python-dateutil
         types-requests
-        types-urllib3
     commands = mypy -p showtime
 
     [testenv:doc]
