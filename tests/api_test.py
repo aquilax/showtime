@@ -63,12 +63,15 @@ def test_show_search(test_api):
     response = get_response("""
 [
     {
-        "id":1,
-        "name": "test-show",
-        "premiered": "2020-01-01",
-        "status": "Ended",
-        "url": "https:/www.example.com/1",
-        "externals":{"tmdb": "111"}
+        "score": 0.000,
+        "show": {
+            "id":1,
+            "name": "test-show",
+            "premiered": "2020-01-01",
+            "status": "Ended",
+            "url": "https:/www.example.com/1",
+            "externals":{"tmdb": "111"}
+        }
     }
 ]
 """)

@@ -45,7 +45,7 @@ class HTTPResponse:
 class HTTPClient():
     """HTTP Client"""
 
-    def request(self, _method: str, url: str, fields: dict[str, str]) -> Any:
+    def request(self, _method: str, url: str, fields: dict[str, str]={}) -> Any:
         headers = {
             "User-Agent": "showtime-cli",
             "Accept": "application/json"
