@@ -35,7 +35,7 @@ setup(
         'Topic :: Utilities',
     ],
     install_requires=[
-        'cmd2==3.1.0',
+        'cmd2==3.1.2',
         'ratelimit==2.2.1',
         'tinydb==4.8.2',
         'terminaltables==3.1.10',
