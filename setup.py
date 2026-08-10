@@ -37,7 +37,7 @@ setup(
     install_requires=[
         'cmd2==3.5.1',
         'ratelimit==2.2.1',
-        'tinydb==4.8.2',
+        'tinydb==4.9.0',
         'terminaltables==3.1.10',
         'python-dateutil==2.9.0.post0',
         'typing-extensions==4.16.0',
