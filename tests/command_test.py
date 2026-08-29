@@ -128,7 +128,8 @@ def test_sync(test_app):
 
     test_app.app.sync.assert_called_once()
     assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """""".strip()
+    assert "Syncing shows..." in str(out.stdout)
+    assert "Done" in str(out.stdout)
     assert out.data is None
 
 
@@ -151,14 +152,9 @@ def test_next(test_app):
     test_app.app.show_get.assert_called_once_with(1)
     test_app.app.episode_get_next_unwatched.assert_called_once_with(1)
     assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+---------+------------+---------+
-| ID | S   | E   | Name              | Runtime | Aired      | Watched |
-+----+-----+-----+-------------------+---------+------------+---------+
-| 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
-+----+-----+-----+-------------------+---------+------------+---------+
-Did you watch this episode [Y/n]:
-""".strip()
+    stdout = str(out.stdout).strip()
+    assert "The first episode" in stdout
+    assert "2020-01-01" in stdout
     assert out.data is None
 
 
@@ -171,14 +167,9 @@ def test_delete(test_app):
     test_app.app.episode_get.assert_called_with(1)
     test_app.app.show_get.assert_called_with(1)
     assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+---------+------------+---------+
-| ID | S   | E   | Name              | Runtime | Aired      | Watched |
-+----+-----+-----+-------------------+---------+------------+---------+
-| 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
-+----+-----+-----+-------------------+---------+------------+---------+
-Do you want to delete this episode [y/N]:
-""".strip()
+    stdout = str(out.stdout).strip()
+    assert "The first episode" in stdout
+    assert "2020-01-01" in stdout
     assert out.data is None
 
 

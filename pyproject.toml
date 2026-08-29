@@ -14,7 +14,7 @@ max_line_length = 120
 [tool.tox]
 legacy_tox_ini = """
     [tox]
-    env_list = py311,mypy,doc
+    env_list = py312,mypy,doc
 
     [testenv]
     deps =
