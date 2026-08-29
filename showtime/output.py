@@ -77,7 +77,7 @@ class Output():
                 show.status,
                 show.url
             ])
-        return Table(data, title='Search Results').table
+        return str(Table(data, title='Search Results').table)
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""

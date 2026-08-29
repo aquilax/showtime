@@ -1,41 +1,114 @@
 [build-system]
-requires = ["setuptools>=83.0.0", "wheel"]
+requires = ["setuptools>=68.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "showtime-cli"
+version = "0.3.22"
+description = "Command line show tracker using the TVMaze public API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [{name = "Evgeniy Vasilev", email = "aquilax@gmail.com"}]
+keywords = ["tv", "commandline", "application", "show", "tvmaze"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "cmd2==4.2.1",
+    "ratelimit==2.2.1",
+    "tinydb==4.9.0",
+    "terminaltables==3.1.10",
+    "python-dateutil==2.9.0.post0",
+    "typing-extensions==4.16.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/aquilax/showtime"
+Repository = "https://github.com/aquilax/showtime"
+
+[project.scripts]
+showtime = "showtime.command:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ratelimit-stubs>=0.2",
+    "types-python-dateutil>=2.8",
+    "types-requests>=2.28",
+    "tox>=4.0",
+    "interrogate>=1.5",
+]
+
+[tool.setuptools]
+packages = ["showtime"]
+
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 norecursedirs = "tests/helpers"
+addopts = "-v --tb=short"
 
-[tool.pylint.format]
-max-line-length = 120
+[tool.coverage.run]
+source = ["showtime"]
+branch = true
 
-[tool.autopep8]
-max_line_length = 120
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+precision = 2
 
-[tool.tox]
-legacy_tox_ini = """
-    [tox]
-    env_list = py312,mypy,doc
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_optional = true
+plugins = "tinydb.mypy_plugin"
 
-    [testenv]
-    deps =
-        pytest
-        pytest-cov
-        cmd2_ext_test
-    commands = pytest
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+lint.select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+lint.ignore = [
+    "E501",  # Line too long (handled by formatter)
+]
 
-    [testenv:mypy]
-    deps =
-        mypy
-        ratelimit-stubs
-        types-python-dateutil
-        types-requests
-    commands = mypy -p showtime
+[tool.ruff.lint.isort]
+known-first-party = ["showtime"]
 
-    [testenv:doc]
-    deps = interrogate
-    skip_install = true
-    commands = interrogate --quiet --fail-under 80 showtime
-"""
+[tool.ruff.format]
+line-length = 120
 
 [tool.interrogate]
 ignore-init-method = true
@@ -48,7 +121,3 @@ fail-under = 95
 exclude = ["setup.py", "docs"]
 verbose = 0
 quiet = false
-
-
-[tool.mypy]
-plugins = "tinydb.mypy_plugin"

@@ -16,7 +16,7 @@ from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId, 
 @limits(calls=20, period=10)
 def _get_episodes(api: Api, show_id: ShowId) -> List[TVMazeEpisode]:
     """Downloads show information from API"""
-    return cast(List[TVMazeEpisode], api.episodes_list(show_id))
+    return api.episodes_list(show_id)
 
 
 def needs_update(episode: Episode, tv_maze_episode: TVMazeEpisode):
