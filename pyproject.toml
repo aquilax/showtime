@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "showtime-cli"
-version = "0.3.22"
+version = "0.3.24"
 description = "Command line show tracker using the TVMaze public API"
 readme = "README.md"
 requires-python = ">=3.12"
