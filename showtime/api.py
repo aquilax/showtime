@@ -54,7 +54,6 @@ class HTTPClient():
         url_parts = list(urlparse(url))
         url_parts[4] = urlencode(fields)
         final_url = urlunparse(url_parts)
-        print(final_url)
         request = urllib.request.Request(final_url, headers=headers)
         with urllib.request.urlopen(request) as response:
             return HTTPResponse(data=response.read())
