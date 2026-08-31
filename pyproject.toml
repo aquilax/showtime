@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "cmd2==4.2.1",
+    "cmd2==4.2.2",
     "ratelimit==2.2.1",
     "tinydb==4.9.0",
     "terminaltables==3.1.10",
