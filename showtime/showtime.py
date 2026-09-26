@@ -120,7 +120,7 @@ class ShowtimeApp():
                 for row_number, row in enumerate(rows, start=1):
                     title = (row.get('Title') or row.get('Const') or 'Unknown title').strip()
                     title_type = (row.get('Title Type') or '').strip().casefold()
-                    if title_type not in {'movie', 'tv movie', 'tvmovie'}:
+                    if title_type not in {'movie', 'tv movie', 'tvmovie', 'video', 'short', 'tv short', 'tvshort'}:
                         skipped += 1
                         if on_progress:
                             on_progress(f"Skipped {row_number}/{total_rows}: {title} (not a movie)")
