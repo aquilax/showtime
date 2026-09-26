@@ -174,14 +174,20 @@ def test_import_imdb_ratings_adds_movies_and_skips_other_rows(test_app, tmp_path
     }
     test_app.database.get_movies = MagicMock(return_value=[tracked_movie])
     test_app.database.update_movie_watched = MagicMock(return_value=[1])
-    test_app.api.movie_find_by_imdb_id = MagicMock(return_value=2)
+    test_app.api.movie_find_by_imdb_id = MagicMock(side_effect=[2, None])
     test_app.api.movie_get = MagicMock(return_value=TMDBMovie(2, 'New Movie', '2021-01-01', 100))
     test_app.api.movie_external_ids = MagicMock(return_value={'imdb_id': 'tt2222222'})
     test_app.database.add_movie = MagicMock(return_value=2)
 
-    result = test_app.import_imdb_ratings(str(export_file))
+    progress = []
+    result = test_app.import_imdb_ratings(str(export_file), on_progress=progress.append)
 
     assert result == (2, 3)
+    assert progress[0] == 'Starting IMDb ratings import (5 rows)'
+    assert 'Imported 1/5: tt1111111' in progress
+    assert 'Imported 2/5: tt2222222' in progress
+    assert 'Skipped 3/5: tt3333333 (not a movie)' in progress
+    assert 'Skipped 5/5: tt5555555 (not found in TMDB)' in progress
     test_app.api.movie_find_by_imdb_id.assert_has_calls([call('tt2222222'), call('tt5555555')])
     test_app.database.update_movie_watched.assert_any_call(1, True, datetime(2020, 1, 2))
     test_app.database.update_movie_watched.assert_any_call(2, True, datetime(2021, 3, 4))

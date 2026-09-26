@@ -85,7 +85,8 @@ class ShowtimeApp():
             transacted_db.update_movie_watched(movie.id, True, when)
         return movie
 
-    def import_imdb_ratings(self, file_name: str) -> tuple[int, int]:
+    def import_imdb_ratings(self, file_name: str,
+                            on_progress: Optional[Callable[[str], None]] = None) -> tuple[int, int]:
         """Imports watched dates from an IMDb ratings export"""
         imported = 0
         skipped = 0
@@ -94,22 +95,35 @@ class ShowtimeApp():
             required_headers = {'Const', 'Your Rating', 'Date Rated', 'Title Type'}
             if reader.fieldnames is None or not required_headers.issubset(reader.fieldnames):
                 raise ValueError('IMDb export must include Const, Your Rating, Date Rated, and Title Type columns')
+            rows = list(reader)
+
+            if on_progress:
+                on_progress(f"Starting IMDb ratings import ({len(rows)} rows)")
 
             imdb_to_tmdb: Dict[str, MovieId] = {}
             with transaction(self.database) as transacted_db:
-                for movie in transacted_db.get_movies():
+                tracked_movies = transacted_db.get_movies()
+                for movie_number, movie in enumerate(tracked_movies, start=1):
                     external_ids = movie.get('external_ids')
                     if external_ids is None:
+                        if on_progress:
+                            on_progress(
+                                f"Fetching IMDb ID for {movie['title']} ({movie_number}/{len(tracked_movies)})"
+                            )
                         external_ids = self.api.movie_external_ids(MovieId(movie['id']))
                         transacted_db.update_movie_external_ids(MovieId(movie['id']), external_ids)
                     imdb_id = external_ids.get('imdb_id')
                     if imdb_id:
                         imdb_to_tmdb[imdb_id] = MovieId(movie['id'])
 
-                for row in reader:
+                total_rows = len(rows)
+                for row_number, row in enumerate(rows, start=1):
+                    title = (row.get('Title') or row.get('Const') or 'Unknown title').strip()
                     title_type = (row.get('Title Type') or '').strip().casefold()
                     if title_type not in {'movie', 'tv movie', 'tvmovie'}:
                         skipped += 1
+                        if on_progress:
+                            on_progress(f"Skipped {row_number}/{total_rows}: {title} (not a movie)")
                         continue
 
                     imdb_id = (row.get('Const') or '').strip()
@@ -117,23 +131,33 @@ class ShowtimeApp():
                     date_rated = (row.get('Date Rated') or '').strip()
                     if not imdb_id or not rating or not date_rated:
                         skipped += 1
+                        if on_progress:
+                            on_progress(f"Skipped {row_number}/{total_rows}: {title} (incomplete rating)")
                         continue
 
                     try:
                         watched_at = dateutil.parser.parse(date_rated)
                     except (dateutil.parser.ParserError, OverflowError):
                         skipped += 1
+                        if on_progress:
+                            on_progress(f"Skipped {row_number}/{total_rows}: {title} (invalid date)")
                         continue
 
                     movie_id = imdb_to_tmdb.get(imdb_id)
                     if movie_id is None:
+                        if on_progress:
+                            on_progress(f"Resolving {row_number}/{total_rows}: {title}")
                         movie_id = self.api.movie_find_by_imdb_id(imdb_id)
                         if movie_id is None:
                             skipped += 1
+                            if on_progress:
+                                on_progress(f"Skipped {row_number}/{total_rows}: {title} (not found in TMDB)")
                             continue
                         tmdb_movie = self._movie_with_external_ids(movie_id)
                         if not tmdb_movie.external_ids or tmdb_movie.external_ids.get('imdb_id') != imdb_id:
                             skipped += 1
+                            if on_progress:
+                                on_progress(f"Skipped {row_number}/{total_rows}: {title} (IMDb ID mismatch)")
                             continue
                         transacted_db.add_movie(tmdb_movie)
                         movie_id = MovieId(tmdb_movie.id)
@@ -141,6 +165,8 @@ class ShowtimeApp():
 
                     transacted_db.update_movie_watched(movie_id, True, watched_at)
                     imported += 1
+                    if on_progress:
+                        on_progress(f"Imported {row_number}/{total_rows}: {title}")
 
         return imported, skipped
 

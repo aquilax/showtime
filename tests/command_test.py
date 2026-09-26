@@ -139,11 +139,16 @@ def test_movie_watched_commands(test_app, command, watched):
 
 
 def test_movie_import_imdb_ratings(test_app):
-    test_app.app.import_imdb_ratings = MagicMock(return_value=(2, 3))
+    def import_ratings(_file_name, on_progress):
+        on_progress('Resolving 1/1: Test Movie')
+        return 2, 3
+
+    test_app.app.import_imdb_ratings = MagicMock(side_effect=import_ratings)
 
     out = test_app.app_cmd('movie_import_imdb_ratings ratings.csv')
 
-    test_app.app.import_imdb_ratings.assert_called_once_with('ratings.csv')
+    test_app.app.import_imdb_ratings.assert_called_once()
+    assert 'Resolving 1/1: Test Movie' in str(out.stdout)
     assert 'Imported 2 movie ratings; skipped 3 rows' in str(out.stdout)
 
 

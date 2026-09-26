@@ -160,7 +160,9 @@ class Showtime(Cmd):
     def do_movie_import_imdb_ratings(self, file_name: Statement) -> None:
         """Import watched movies from an IMDb ratings export [movie_import_imdb_ratings <filename>]"""
         try:
-            imported, skipped = self.app.import_imdb_ratings(str(file_name))
+            imported, skipped = self.app.import_imdb_ratings(
+                str(file_name), on_progress=self.output.pfeedback
+            )
         except (OSError, RuntimeError, ValueError) as error:
             self.output.perror(str(error))
             return
