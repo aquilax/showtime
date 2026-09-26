@@ -15,12 +15,13 @@ from showtime.config import Config
 from showtime.database import get_cashed_write_db, get_memory_db
 from showtime.output import Output
 from showtime.showtime import ShowtimeApp
-from showtime.types import Episode, EpisodeId, Show, ShowId
+from showtime.types import Episode, EpisodeId, MovieId, Show, ShowId
 
 from . import __version__
 
 SHOW_CATEGORY = 'Show management'
 EPISODE_CATEGORY = 'Episode management'
+MOVIE_CATEGORY = 'Movie management'
 
 
 class Showtime(Cmd):
@@ -89,6 +90,81 @@ class Showtime(Cmd):
         search_result = self.app.show_search_api(statement)
         search_result_table = self.output.format_search_results(search_result)
         self.output.poutput(search_result_table)
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_search(self, statement: Statement) -> None:
+        """Search TMDB for movies [movie_search <query>]"""
+        try:
+            search_result = self.app.movie_search_api(statement)
+        except RuntimeError as error:
+            self.output.perror(str(error))
+            return
+        self.output.poutput(self.output.format_movie_search_results(search_result))
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_add(self, statement: Statement) -> None:
+        """Add a movie from TMDB [movie_add <tmdb_id>]"""
+        try:
+            movie = self.app.movie_add(MovieId(statement))
+        except RuntimeError as error:
+            self.output.perror(str(error))
+            return
+        self.output.poutput(f"Added movie: ({movie.id}) {movie.title}")
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_add_watched(self, statement: Statement) -> None:
+        """Add a movie and mark it watched [movie_add_watched <tmdb_id>]"""
+        try:
+            movie = self.app.movie_add_watched(MovieId(statement), self._get_current_datetime())
+        except RuntimeError as error:
+            self.output.perror(str(error))
+            return
+        self.output.poutput(f"Added and marked as watched: ({movie.id}) {movie.title}")
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_remove(self, statement: Statement) -> None:
+        """Remove a tracked movie [movie_remove <tmdb_id>]"""
+        movie_id = MovieId(statement)
+        movie = self.app.movie_get(movie_id)
+        if not movie:
+            self.output.perror(f'Movie {movie_id} not found')
+            return
+        self.app.movie_remove(movie_id)
+        self.output.poutput(f"Removed movie: ({movie_id}) {movie['title']}")
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movies(self, query: Statement) -> None:
+        """Show tracked movies [movies <query>]"""
+        movies = self.app.movie_search(query)
+        self.output.ppaged(self.output.movies_table(movies))
+
+    def _set_movie_watched(self, statement: Statement, watched: bool) -> None:
+        movie_id = MovieId(statement)
+        movie = self.app.movie_get(movie_id)
+        if not movie:
+            self.output.perror(f'Movie {movie_id} not found')
+            return
+        self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_watch(self, statement: Statement) -> None:
+        """Mark a movie as watched [movie_watch <tmdb_id>]"""
+        self._set_movie_watched(statement, True)
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_unwatch(self, statement: Statement) -> None:
+        """Mark a movie as unwatched [movie_unwatch <tmdb_id>]"""
+        self._set_movie_watched(statement, False)
+
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_import_imdb_ratings(self, file_name: Statement) -> None:
+        """Import watched movies from an IMDb ratings export [movie_import_imdb_ratings <filename>]"""
+        try:
+            imported, skipped = self.app.import_imdb_ratings(str(file_name))
+        except (OSError, RuntimeError, ValueError) as error:
+            self.output.perror(str(error))
+            return
+        self.output.poutput(f"Imported {imported} movie ratings; skipped {skipped} rows")
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_follow(self, statement: Statement) -> None:
@@ -364,9 +440,9 @@ class Showtime(Cmd):
 
 
 def main() -> None:
-    api = Api(get_default_pool_manager())
     config = Config()
     config.load()
+    api = Api(get_default_pool_manager(), tmdb_access_token=config.get('TMDB', 'AccessToken') or None)
     dry_run = os.getenv('SHOWTIME_DRY_RUN') is not None
     database_filename = config.get('Database', 'Path')
     database = get_memory_db() if dry_run else get_cashed_write_db(database_filename)

@@ -19,6 +19,9 @@ class Config(ConfigParser):
         self.add_section('History')
         self.set('History', 'Path', str(os.path.expanduser('~/.showtime_history')))
 
+        self.add_section('TMDB')
+        self.set('TMDB', 'AccessToken', '')
+
         if file_name == '':
             for location in self.common_locations:
                 if os.path.exists(location):
@@ -26,3 +29,7 @@ class Config(ConfigParser):
 
         if file_name:
             self.read(file_name)
+
+        tmdb_access_token = os.getenv('TMDB_ACCESS_TOKEN')
+        if tmdb_access_token:
+            self.set('TMDB', 'AccessToken', tmdb_access_token)

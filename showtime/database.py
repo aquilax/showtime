@@ -10,11 +10,12 @@ from tinydb.middlewares import CachingMiddleware
 from tinydb.queries import QueryLike
 from tinydb.storages import JSONStorage, MemoryStorage
 
-from showtime.types import (Episode, EpisodeId, Show, ShowId, ShowStatus,
-                            TVMazeEpisode, TVMazeShow, ShowWithCount)
+from showtime.types import (Episode, EpisodeId, Movie, MovieId, Show, ShowId, ShowStatus,
+                            TMDBMovie, TVMazeEpisode, TVMazeShow, ShowWithCount)
 
 SHOW = 'show'
 EPISODE = 'episode'
+MOVIE = 'movie'
 
 NOT_WATCHED_VALUE = ''
 
@@ -66,6 +67,42 @@ class Database(TinyDB):
             'watched': NOT_WATCHED_VALUE
         })
         return EpisodeId(episode.id)
+
+    def add_movie(self, tmdb_movie: TMDBMovie) -> MovieId:
+        """Adds a movie if it is not already added"""
+        if not self.table(MOVIE).contains(where('id') == tmdb_movie.id):
+            self.table(MOVIE).insert({
+                'id': tmdb_movie.id,
+                'title': tmdb_movie.title,
+                'release_date': tmdb_movie.release_date,
+                'runtime': tmdb_movie.runtime,
+                'watched': NOT_WATCHED_VALUE,
+                'external_ids': tmdb_movie.external_ids or {},
+            })
+        elif tmdb_movie.external_ids is not None:
+            self.update_movie_external_ids(tmdb_movie.id, tmdb_movie.external_ids)
+        return MovieId(tmdb_movie.id)
+
+    def get_movies(self) -> List[Movie]:
+        """Returns movies sorted by title"""
+        return cast(List[Movie], sorted(self.table(MOVIE).all(), key=lambda movie: movie['title'].lower()))
+
+    def get_movie(self, movie_id: MovieId) -> Optional[Movie]:
+        """Returns a single movie"""
+        return cast(Optional[Movie], self.table(MOVIE).get(where('id') == movie_id))
+
+    def delete_movie(self, movie_id: MovieId) -> List[int]:
+        """Removes a movie from the database"""
+        return self.table(MOVIE).remove(where('id') == movie_id)
+
+    def update_movie_external_ids(self, movie_id: MovieId, external_ids: Dict[str, Optional[str]]) -> List[int]:
+        """Stores external identifiers for a movie"""
+        return self.table(MOVIE).update({'external_ids': external_ids}, where('id') == movie_id)
+
+    def update_movie_watched(self, movie_id: MovieId, watched: bool, when: datetime) -> List[int]:
+        """Updates the watched date of a movie"""
+        watched_value = when.isoformat() if watched else NOT_WATCHED_VALUE
+        return self.table(MOVIE).update({'watched': watched_value}, where('id') == movie_id)
 
     def get_shows(self) -> List[Show]:
         """Returns list of all added shows"""

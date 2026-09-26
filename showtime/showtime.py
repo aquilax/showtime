@@ -8,8 +8,8 @@ from ratelimit import limits, sleep_and_retry
 from showtime.api import Api
 from showtime.config import Config
 from showtime.database import Database, transaction, NOT_WATCHED_VALUE
-from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Show, ShowId, ShowWithCount,
-                            TVMazeEpisode, TVMazeShow)
+from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Movie, MovieId, Show, ShowId, ShowWithCount,
+                            TMDBMovie, TVMazeEpisode, TVMazeShow)
 
 
 @sleep_and_retry
@@ -52,6 +52,111 @@ class ShowtimeApp():
             query = query.lower()
             shows = [s for s in shows if query in s['name'].lower()]
         return sorted(shows, key=lambda k: k['name'])
+
+    def movie_search(self, query: str) -> List[Movie]:
+        """Searches tracked movies using the database"""
+        movies = self.database.get_movies()
+        if query:
+            query = query.lower()
+            movies = [movie for movie in movies if query in movie['title'].lower()]
+        return movies
+
+    def movie_search_api(self, query: str) -> List[TMDBMovie]:
+        """Searches TMDB for movie titles"""
+        return self.api.movie_search(query)
+
+    def _movie_with_external_ids(self, movie_id: MovieId) -> TMDBMovie:
+        movie = self.api.movie_get(movie_id)
+        external_ids = self.api.movie_external_ids(movie_id)
+        return movie._replace(external_ids=external_ids)
+
+    def movie_add(self, movie_id: MovieId) -> TMDBMovie:
+        """Adds a movie from TMDB to the database"""
+        movie = self._movie_with_external_ids(movie_id)
+        with transaction(self.database) as transacted_db:
+            transacted_db.add_movie(movie)
+        return movie
+
+    def movie_add_watched(self, movie_id: MovieId, when: datetime) -> TMDBMovie:
+        """Adds a movie and marks it as watched"""
+        movie = self._movie_with_external_ids(movie_id)
+        with transaction(self.database) as transacted_db:
+            transacted_db.add_movie(movie)
+            transacted_db.update_movie_watched(movie.id, True, when)
+        return movie
+
+    def import_imdb_ratings(self, file_name: str) -> tuple[int, int]:
+        """Imports watched dates from an IMDb ratings export"""
+        imported = 0
+        skipped = 0
+        with open(file_name, newline='', encoding='utf-8-sig') as csv_file:
+            reader = csv.DictReader(csv_file)
+            required_headers = {'Const', 'Your Rating', 'Date Rated', 'Title Type'}
+            if reader.fieldnames is None or not required_headers.issubset(reader.fieldnames):
+                raise ValueError('IMDb export must include Const, Your Rating, Date Rated, and Title Type columns')
+
+            imdb_to_tmdb: Dict[str, MovieId] = {}
+            with transaction(self.database) as transacted_db:
+                for movie in transacted_db.get_movies():
+                    external_ids = movie.get('external_ids')
+                    if external_ids is None:
+                        external_ids = self.api.movie_external_ids(MovieId(movie['id']))
+                        transacted_db.update_movie_external_ids(MovieId(movie['id']), external_ids)
+                    imdb_id = external_ids.get('imdb_id')
+                    if imdb_id:
+                        imdb_to_tmdb[imdb_id] = MovieId(movie['id'])
+
+                for row in reader:
+                    title_type = (row.get('Title Type') or '').strip().casefold()
+                    if title_type not in {'movie', 'tv movie', 'tvmovie'}:
+                        skipped += 1
+                        continue
+
+                    imdb_id = (row.get('Const') or '').strip()
+                    rating = (row.get('Your Rating') or '').strip()
+                    date_rated = (row.get('Date Rated') or '').strip()
+                    if not imdb_id or not rating or not date_rated:
+                        skipped += 1
+                        continue
+
+                    try:
+                        watched_at = dateutil.parser.parse(date_rated)
+                    except (dateutil.parser.ParserError, OverflowError):
+                        skipped += 1
+                        continue
+
+                    movie_id = imdb_to_tmdb.get(imdb_id)
+                    if movie_id is None:
+                        movie_id = self.api.movie_find_by_imdb_id(imdb_id)
+                        if movie_id is None:
+                            skipped += 1
+                            continue
+                        tmdb_movie = self._movie_with_external_ids(movie_id)
+                        if not tmdb_movie.external_ids or tmdb_movie.external_ids.get('imdb_id') != imdb_id:
+                            skipped += 1
+                            continue
+                        transacted_db.add_movie(tmdb_movie)
+                        movie_id = MovieId(tmdb_movie.id)
+                        imdb_to_tmdb[imdb_id] = movie_id
+
+                    transacted_db.update_movie_watched(movie_id, True, watched_at)
+                    imported += 1
+
+        return imported, skipped
+
+    def movie_get(self, movie_id: MovieId) -> Optional[Movie]:
+        """Returns a tracked movie"""
+        return self.database.get_movie(movie_id)
+
+    def movie_remove(self, movie_id: MovieId) -> List[int]:
+        """Removes a tracked movie"""
+        with transaction(self.database) as transacted_db:
+            return transacted_db.delete_movie(movie_id)
+
+    def movie_update_watched(self, movie_id: MovieId, watched: bool, when: datetime) -> List[int]:
+        """Marks a movie as watched or unwatched"""
+        with transaction(self.database) as transacted_db:
+            return transacted_db.update_movie_watched(movie_id, watched, when)
 
     def _sync_episodes(self, db: Database, show_id: ShowId, tv_maze_episodes: List[TVMazeEpisode],
                        on_insert: Optional[Callable[[TVMazeEpisode], None]] = None,

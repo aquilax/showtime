@@ -9,6 +9,7 @@ from helpers import decorated_episode, episode, show, tv_maze_show
 
 from showtime.command import Showtime
 from showtime.showtime import ShowtimeApp
+from showtime.types import TMDBMovie
 
 
 class ShowtimeTester(cmd2_ext_test.ExternalTestMixin, Showtime):
@@ -64,6 +65,83 @@ def test_search(test_app):
 +----+-----------+------------+-----------+--------------------------+
 """.strip()
     assert out.data is None
+
+
+def test_movie_search(test_app):
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', None)
+    test_app.app.movie_search_api = MagicMock(return_value=[movie])
+
+    out = test_app.app_cmd('movie_search test')
+
+    test_app.app.movie_search_api.assert_called_once_with('test')
+    assert 'Test Movie' in str(out.stdout)
+    assert '2020-01-01' in str(out.stdout)
+
+
+def test_movie_add(test_app):
+    test_app.app.movie_add = MagicMock(return_value=TMDBMovie(42, 'Test Movie', '2020-01-01', 120))
+
+    out = test_app.app_cmd('movie_add 42')
+
+    test_app.app.movie_add.assert_called_once_with(42)
+    assert 'Added movie: (42) Test Movie' in str(out.stdout)
+
+
+def test_movie_add_watched(test_app):
+    test_app.app.movie_add_watched = MagicMock(return_value=TMDBMovie(42, 'Test Movie', '2020-01-01', 120))
+
+    out = test_app.app_cmd('movie_add_watched 42')
+
+    test_app.app.movie_add_watched.assert_called_once_with(42, datetime(2020, 1, 1, 1, 0))
+    assert 'Added and marked as watched: (42) Test Movie' in str(out.stdout)
+
+
+def test_movie_remove(test_app):
+    test_app.app.movie_get = MagicMock(return_value={'id': 42, 'title': 'Test Movie'})
+    test_app.app.movie_remove = MagicMock()
+
+    out = test_app.app_cmd('movie_remove 42')
+
+    test_app.app.movie_get.assert_called_once_with(42)
+    test_app.app.movie_remove.assert_called_once_with(42)
+    assert 'Removed movie: (42) Test Movie' in str(out.stdout)
+
+
+def test_movies(test_app):
+    test_app.app.movie_search = MagicMock(return_value=[{
+        'id': 42,
+        'title': 'Test Movie',
+        'release_date': '2020-01-01',
+        'runtime': 120,
+        'watched': '',
+    }])
+
+    out = test_app.app_cmd('movies test')
+
+    test_app.app.movie_search.assert_called_once_with('test')
+    assert 'Tracked Movies' in str(out.stdout)
+    assert 'Test Movie' in str(out.stdout)
+
+
+@pytest.mark.parametrize(('command', 'watched'), [('movie_watch', True), ('movie_unwatch', False)])
+def test_movie_watched_commands(test_app, command, watched):
+    test_app.app.movie_get = MagicMock(return_value={'id': 42})
+    test_app.app.movie_update_watched = MagicMock()
+
+    out = test_app.app_cmd(f'{command} 42')
+
+    test_app.app.movie_get.assert_called_once_with(42)
+    test_app.app.movie_update_watched.assert_called_once_with(42, watched, datetime(2020, 1, 1, 1, 0))
+    assert str(out.stdout).strip() == ''
+
+
+def test_movie_import_imdb_ratings(test_app):
+    test_app.app.import_imdb_ratings = MagicMock(return_value=(2, 3))
+
+    out = test_app.app_cmd('movie_import_imdb_ratings ratings.csv')
+
+    test_app.app.import_imdb_ratings.assert_called_once_with('ratings.csv')
+    assert 'Imported 2 movie ratings; skipped 3 rows' in str(out.stdout)
 
 
 def test_episodes(test_app):
