@@ -44,6 +44,7 @@ def movie_to_model(movie: Dict) -> TMDBMovie:
         title=movie['title'],
         release_date=movie.get('release_date') or None,
         runtime=movie.get('runtime'),
+        original_language=movie.get('original_language'),
     )
 
 

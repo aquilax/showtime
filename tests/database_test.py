@@ -93,7 +93,7 @@ def test_add_episode(test_database):
 
 
 def test_add_movie(test_database):
-    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'})
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'}, 'en')
 
     result = test_database.add_movie(movie)
     test_database.add_movie(movie)
@@ -106,6 +106,7 @@ def test_add_movie(test_database):
         'runtime': 120,
         'watched': '',
         'external_ids': {'imdb_id': 'tt1234567'},
+        'original_language': 'en',
     }]
 
 
@@ -113,11 +114,12 @@ def test_add_movie_updates_external_ids_without_resetting_watched(test_database)
     test_database.add_movie(TMDBMovie(42, 'Test Movie', '2020-01-01', 120))
     test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
 
-    test_database.add_movie(TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'}))
+    test_database.add_movie(TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'}, 'en'))
 
     movie = test_database.get_movie(42)
     assert movie is not None
     assert movie['external_ids'] == {'imdb_id': 'tt1234567'}
+    assert movie['original_language'] == 'en'
     assert movie['watched'] == '2021-01-01T01:00:00'
 
 

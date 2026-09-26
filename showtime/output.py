@@ -81,24 +81,26 @@ class Output():
 
     def format_movie_search_results(self, search_result: List[TMDBMovie]) -> str:
         """Formats TMDB movie search results as a table"""
-        data = [['ID', 'Title', 'Released', 'Runtime']]
+        data = [['ID', 'Title', 'Released', 'Language', 'Runtime']]
         for movie in search_result:
             data.append([
                 str(movie.id),
                 movie.title,
                 movie.release_date or '',
+                movie.original_language or '',
                 str(movie.runtime) if movie.runtime is not None else '',
             ])
         return str(Table(data, title='Movie Search Results').table)
 
     def movies_table(self, movies: List[Movie]) -> str:
         """Formats tracked movies as a table"""
-        data = [['ID', 'Title', 'Released', 'Runtime', 'Watched']]
+        data = [['ID', 'Title', 'Released', 'Language', 'Runtime', 'Watched']]
         for movie in movies:
             data.append([
                 str(movie['id']),
                 movie['title'],
                 movie['release_date'] or '',
+                movie.get('original_language') or '',
                 str(movie['runtime']) if movie['runtime'] is not None else '',
                 movie['watched'],
             ])

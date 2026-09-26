@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from datetime import date, datetime
-from typing import (Iterator, Tuple, Dict, Generator, List,  Optional, cast)
+from typing import (Any, Iterator, Tuple, Dict, Generator, List,  Optional, cast)
 
 import dateutil.parser
 from tinydb import TinyDB, where
@@ -78,9 +78,16 @@ class Database(TinyDB):
                 'runtime': tmdb_movie.runtime,
                 'watched': NOT_WATCHED_VALUE,
                 'external_ids': tmdb_movie.external_ids or {},
+                'original_language': tmdb_movie.original_language,
             })
-        elif tmdb_movie.external_ids is not None:
-            self.update_movie_external_ids(tmdb_movie.id, tmdb_movie.external_ids)
+        else:
+            updates: Dict[str, Any] = {}
+            if tmdb_movie.external_ids is not None:
+                updates['external_ids'] = tmdb_movie.external_ids
+            if tmdb_movie.original_language is not None:
+                updates['original_language'] = tmdb_movie.original_language
+            if updates:
+                self.table(MOVIE).update(updates, where('id') == tmdb_movie.id)
         return MovieId(tmdb_movie.id)
 
     def get_movies(self) -> List[Movie]:

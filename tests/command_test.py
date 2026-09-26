@@ -68,7 +68,7 @@ def test_search(test_app):
 
 
 def test_movie_search(test_app):
-    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', None)
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', None, original_language='en')
     test_app.app.movie_search_api = MagicMock(return_value=[movie])
 
     out = test_app.app_cmd('movie_search test')
@@ -76,6 +76,7 @@ def test_movie_search(test_app):
     test_app.app.movie_search_api.assert_called_once_with('test')
     assert 'Test Movie' in str(out.stdout)
     assert '2020-01-01' in str(out.stdout)
+    assert 'en' in str(out.stdout)
 
 
 def test_movie_add(test_app):
@@ -114,6 +115,7 @@ def test_movies(test_app):
         'release_date': '2020-01-01',
         'runtime': 120,
         'watched': '',
+        'original_language': 'en',
     }])
 
     out = test_app.app_cmd('movies test')
@@ -121,6 +123,7 @@ def test_movies(test_app):
     test_app.app.movie_search.assert_called_once_with('test')
     assert 'Tracked Movies' in str(out.stdout)
     assert 'Test Movie' in str(out.stdout)
+    assert 'en' in str(out.stdout)
 
 
 @pytest.mark.parametrize(('command', 'watched'), [('movie_watch', True), ('movie_unwatch', False)])

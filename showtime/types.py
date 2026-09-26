@@ -37,6 +37,7 @@ class TMDBMovie(NamedTuple):
     release_date: str | None
     runtime: int | None
     external_ids: Optional[Dict[str, Optional[str]]] = None
+    original_language: Optional[str] = None
 
 
 class Movie(TypedDict):
@@ -47,6 +48,7 @@ class Movie(TypedDict):
     runtime: int | None
     watched: Date
     external_ids: NotRequired[Dict[str, Optional[str]]]
+    original_language: NotRequired[Optional[str]]
 
 
 class ShowStatus(Enum):

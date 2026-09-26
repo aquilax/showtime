@@ -89,7 +89,7 @@ def test_movie_search(test_api):
     response = get_response('''
 {
     "results": [
-        {"id": 42, "title": "Test Movie", "release_date": "2020-01-01"}
+        {"id": 42, "title": "Test Movie", "release_date": "2020-01-01", "original_language": "en"}
     ]
 }
 ''')
@@ -98,16 +98,17 @@ def test_movie_search(test_api):
     result = test_api.movie_search('test')
 
     test_api.http.request.assert_called_once_with(
-        'GET', 'https://api.themoviedb.org/3/search/movie', fields={'query': 'test'},
+        'GET', 'https://api.themoviedb.org/3/search/movie',
+        fields={'query': 'test', 'include_adult': 'true'},
         headers={'Authorization': 'Bearer test-token'}
     )
-    assert result == [TMDBMovie(42, 'Test Movie', '2020-01-01', None)]
+    assert result == [TMDBMovie(42, 'Test Movie', '2020-01-01', None, original_language='en')]
 
 
 def test_movie_get(test_api):
     test_api.tmdb_access_token = 'test-token'
     response = get_response('''
-{"id": 42, "title": "Test Movie", "release_date": "2020-01-01", "runtime": 120}
+{"id": 42, "title": "Test Movie", "release_date": "2020-01-01", "runtime": 120, "original_language": "en"}
 ''')
     test_api.http.request = MagicMock(return_value=response)
 
@@ -116,7 +117,7 @@ def test_movie_get(test_api):
     test_api.http.request.assert_called_once_with(
         'GET', 'https://api.themoviedb.org/3/movie/42', headers={'Authorization': 'Bearer test-token'}
     )
-    assert result == TMDBMovie(42, 'Test Movie', '2020-01-01', 120)
+    assert result == TMDBMovie(42, 'Test Movie', '2020-01-01', 120, original_language='en')
 
 
 def test_movie_external_ids(test_api):
