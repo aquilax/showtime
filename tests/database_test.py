@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 from showtime.database import Database, get_memory_db, transaction
-from showtime.types import ShowStatus, TVMazeShow, TVMazeEpisode
+from showtime.types import ShowStatus, TMDBMovie, TVMazeShow, TVMazeEpisode
 
 from helpers import decorated_episode, episode, show, tv_maze_show, tv_maze_episode
 
@@ -90,6 +90,58 @@ def test_update_show(test_database):
 def test_add_episode(test_database):
     result = test_database.add_episode(1, tv_maze_episode)
     assert result == 1
+
+
+def test_add_movie(test_database):
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'}, 'en')
+
+    result = test_database.add_movie(movie)
+    test_database.add_movie(movie)
+
+    assert result == 42
+    assert test_database.get_movies() == [{
+        'id': 42,
+        'title': 'Test Movie',
+        'release_date': '2020-01-01',
+        'runtime': 120,
+        'watched': '',
+        'external_ids': {'imdb_id': 'tt1234567'},
+        'original_language': 'en',
+    }]
+
+
+def test_add_movie_updates_external_ids_without_resetting_watched(test_database):
+    test_database.add_movie(TMDBMovie(42, 'Test Movie', '2020-01-01', 120))
+    test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
+
+    test_database.add_movie(TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'}, 'en'))
+
+    movie = test_database.get_movie(42)
+    assert movie is not None
+    assert movie['external_ids'] == {'imdb_id': 'tt1234567'}
+    assert movie['original_language'] == 'en'
+    assert movie['watched'] == '2021-01-01T01:00:00'
+
+
+def test_update_movie_watched(test_database):
+    test_database.add_movie(TMDBMovie(42, 'Test Movie', None, None))
+
+    result = test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
+    watched_movie = test_database.get_movie(42)
+    test_database.update_movie_watched(42, False, datetime(2021, 1, 2, 1))
+
+    assert result == [1]
+    assert watched_movie is not None and watched_movie['watched'] == '2021-01-01T01:00:00'
+    assert test_database.get_movie(42)['watched'] == ''
+
+
+def test_delete_movie(test_database):
+    test_database.add_movie(TMDBMovie(42, 'Test Movie', None, None))
+
+    result = test_database.delete_movie(42)
+
+    assert result == [1]
+    assert test_database.get_movie(42) is None
 
 
 def test_get_shows(test_database):

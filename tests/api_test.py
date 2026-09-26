@@ -4,6 +4,7 @@ import pytest
 from helpers import tv_maze_show, tv_maze_episode
 
 from showtime.api import Api
+from showtime.types import TMDBMovie
 
 
 def get_response(data: str):
@@ -81,3 +82,83 @@ def test_show_search(test_api):
 
     test_api.http.request.assert_called_once_with('GET', 'https://api.tvmaze.com/search/shows', fields={'q': 'name'})
     assert result == [tv_maze_show]
+
+
+def test_movie_search(test_api):
+    test_api.tmdb_access_token = 'test-token'
+    response = get_response('''
+{
+    "results": [
+        {"id": 42, "title": "Test Movie", "release_date": "2020-01-01", "original_language": "en"}
+    ]
+}
+''')
+    test_api.http.request = MagicMock(return_value=response)
+
+    result = test_api.movie_search('test')
+
+    test_api.http.request.assert_called_once_with(
+        'GET', 'https://api.themoviedb.org/3/search/movie',
+        fields={'query': 'test', 'include_adult': 'true'},
+        headers={'Authorization': 'Bearer test-token'}
+    )
+    assert result == [TMDBMovie(42, 'Test Movie', '2020-01-01', None, original_language='en')]
+
+
+def test_movie_get(test_api):
+    test_api.tmdb_access_token = 'test-token'
+    response = get_response('''
+{"id": 42, "title": "Test Movie", "release_date": "2020-01-01", "runtime": 120, "original_language": "en"}
+''')
+    test_api.http.request = MagicMock(return_value=response)
+
+    result = test_api.movie_get(42)
+
+    test_api.http.request.assert_called_once_with(
+        'GET', 'https://api.themoviedb.org/3/movie/42', headers={'Authorization': 'Bearer test-token'}
+    )
+    assert result == TMDBMovie(42, 'Test Movie', '2020-01-01', 120, original_language='en')
+
+
+def test_movie_external_ids(test_api):
+    test_api.tmdb_access_token = 'test-token'
+    response = get_response('''
+{"id": 42, "imdb_id": "tt1234567", "wikidata_id": "Q123", "facebook_id": null}
+''')
+    test_api.http.request = MagicMock(return_value=response)
+
+    result = test_api.movie_external_ids(42)
+
+    test_api.http.request.assert_called_once_with(
+        'GET', 'https://api.themoviedb.org/3/movie/42/external_ids',
+        headers={'Authorization': 'Bearer test-token'}
+    )
+    assert result == {'imdb_id': 'tt1234567', 'wikidata_id': 'Q123', 'facebook_id': None}
+
+
+def test_movie_find_by_imdb_id(test_api):
+    test_api.tmdb_access_token = 'test-token'
+    response = get_response('''
+{"movie_results": [{"id": 42, "title": "Test Movie"}], "tv_results": []}
+''')
+    test_api.http.request = MagicMock(return_value=response)
+
+    result = test_api.movie_find_by_imdb_id('tt1234567')
+
+    test_api.http.request.assert_called_once_with(
+        'GET', 'https://api.themoviedb.org/3/find/tt1234567',
+        fields={'external_source': 'imdb_id'}, headers={'Authorization': 'Bearer test-token'}
+    )
+    assert result == 42
+
+
+def test_movie_find_by_imdb_id_not_found(test_api):
+    test_api.tmdb_access_token = 'test-token'
+    test_api.http.request = MagicMock(return_value=get_response('{"movie_results": []}'))
+
+    assert test_api.movie_find_by_imdb_id('tt1234567') is None
+
+
+def test_movie_search_requires_token(test_api):
+    with pytest.raises(RuntimeError, match='TMDB access token is required'):
+        test_api.movie_search('test')

@@ -5,7 +5,7 @@ from typing import Callable, Dict, List
 
 from terminaltables import AsciiTable as Table  # type: ignore
 
-from showtime.types import (DecoratedEpisode, Episode, Show, TVMazeEpisode,
+from showtime.types import (DecoratedEpisode, Episode, Movie, Show, TMDBMovie, TVMazeEpisode,
                             TVMazeShow, ShowWithCount)
 
 PrintFunction = Callable[[str], None]
@@ -78,6 +78,33 @@ class Output():
                 show.url
             ])
         return str(Table(data, title='Search Results').table)
+
+    def format_movie_search_results(self, search_result: List[TMDBMovie]) -> str:
+        """Formats TMDB movie search results as a table"""
+        data = [['ID', 'Title', 'Released', 'Language', 'Runtime']]
+        for movie in search_result:
+            data.append([
+                str(movie.id),
+                movie.title,
+                movie.release_date or '',
+                movie.original_language or '',
+                str(movie.runtime) if movie.runtime is not None else '',
+            ])
+        return str(Table(data, title='Movie Search Results').table)
+
+    def movies_table(self, movies: List[Movie]) -> str:
+        """Formats tracked movies as a table"""
+        data = [['ID', 'Title', 'Released', 'Language', 'Runtime', 'Watched']]
+        for movie in movies:
+            data.append([
+                str(movie['id']),
+                movie['title'],
+                movie['release_date'] or '',
+                movie.get('original_language') or '',
+                str(movie['runtime']) if movie['runtime'] is not None else '',
+                movie['watched'],
+            ])
+        return str(Table(data, title='Tracked Movies').table)
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""

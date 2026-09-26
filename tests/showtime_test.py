@@ -1,10 +1,11 @@
 from datetime import date, datetime
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from helpers import decorated_episode, episode, show, show2, tv_maze_show, tv_maze_episode, get_tv_maze_episode
 
 from showtime.showtime import ShowtimeApp
+from showtime.types import TMDBMovie
 
 
 @pytest.fixture
@@ -98,6 +99,147 @@ def test_show_search_api(test_app):
 
     test_app.api.show_search.assert_called_once_with("test")
     assert result == [tv_maze_show]
+
+def test_movie_search(test_app):
+    movies = [
+        {'id': 42, 'title': 'Test Movie', 'release_date': '2020-01-01', 'runtime': 120, 'watched': ''},
+        {'id': 43, 'title': 'Other Film', 'release_date': None, 'runtime': None, 'watched': ''},
+    ]
+    test_app.database.get_movies = MagicMock(return_value=movies)
+
+    result = test_app.movie_search('test')
+
+    assert result == [movies[0]]
+
+
+def test_movie_search_api(test_app):
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120)
+    test_app.api.movie_search = MagicMock(return_value=[movie])
+
+    result = test_app.movie_search_api('test')
+
+    test_app.api.movie_search.assert_called_once_with('test')
+    assert result == [movie]
+
+
+def test_movie_add(test_app):
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'})
+    test_app.api.movie_get = MagicMock(return_value=movie)
+    test_app.api.movie_external_ids = MagicMock(return_value={'imdb_id': 'tt1234567'})
+    test_app.database.add_movie = MagicMock(return_value=42)
+
+    result = test_app.movie_add(42)
+
+    test_app.api.movie_get.assert_called_once_with(42)
+    test_app.api.movie_external_ids.assert_called_once_with(42)
+    test_app.database.add_movie.assert_called_once_with(movie)
+    assert result == movie
+
+
+def test_movie_add_watched(test_app):
+    movie = TMDBMovie(42, 'Test Movie', '2020-01-01', 120, {'imdb_id': 'tt1234567'})
+    when = datetime(2020, 1, 1, 1, 0)
+    test_app.api.movie_get = MagicMock(return_value=movie)
+    test_app.api.movie_external_ids = MagicMock(return_value={'imdb_id': 'tt1234567'})
+    test_app.database.add_movie = MagicMock(return_value=42)
+    test_app.database.update_movie_watched = MagicMock(return_value=[1])
+
+    result = test_app.movie_add_watched(42, when)
+
+    test_app.api.movie_get.assert_called_once_with(42)
+    test_app.api.movie_external_ids.assert_called_once_with(42)
+    test_app.database.add_movie.assert_called_once_with(movie)
+    test_app.database.update_movie_watched.assert_called_once_with(42, True, when)
+    assert result == movie
+
+
+def test_import_imdb_ratings_adds_movies_and_skips_other_rows(test_app, tmp_path):
+    export_file = tmp_path / 'ratings.csv'
+    export_file.write_text(
+        'Const,Your Rating,Date Rated,Title Type\n'
+        'tt1111111,8,2020-01-02,Movie\n'
+        'tt2222222,7,2021-03-04,TV Movie\n'
+        'tt3333333,9,2022-05-06,TV Series\n'
+        'tt4444444,,2023-07-08,Movie\n'
+        'tt5555555,6,2024-09-10,Movie\n',
+        encoding='utf-8',
+    )
+    tracked_movie = {
+        'id': 1,
+        'title': 'Already Tracked',
+        'release_date': '2019-01-01',
+        'runtime': 90,
+        'watched': '',
+        'external_ids': {'imdb_id': 'tt1111111'},
+    }
+    test_app.database.get_movies = MagicMock(return_value=[tracked_movie])
+    test_app.database.update_movie_watched = MagicMock(return_value=[1])
+    test_app.api.movie_find_by_imdb_id = MagicMock(side_effect=[2, None])
+    test_app.api.movie_get = MagicMock(return_value=TMDBMovie(2, 'New Movie', '2021-01-01', 100))
+    test_app.api.movie_external_ids = MagicMock(return_value={'imdb_id': 'tt2222222'})
+    test_app.database.add_movie = MagicMock(return_value=2)
+
+    progress = []
+    result = test_app.import_imdb_ratings(str(export_file), on_progress=progress.append)
+
+    assert result == (2, 3)
+    assert progress[0] == 'Starting IMDb ratings import (5 rows)'
+    assert 'Imported 1/5: tt1111111' in progress
+    assert 'Imported 2/5: tt2222222' in progress
+    assert 'Skipped 3/5: tt3333333 (not a movie)' in progress
+    assert 'Skipped 5/5: tt5555555 (not found in TMDB)' in progress
+    test_app.api.movie_find_by_imdb_id.assert_has_calls([call('tt2222222'), call('tt5555555')])
+    test_app.database.update_movie_watched.assert_any_call(1, True, datetime(2020, 1, 2))
+    test_app.database.update_movie_watched.assert_any_call(2, True, datetime(2021, 3, 4))
+
+
+def test_import_imdb_ratings_backfills_existing_external_ids(test_app, tmp_path):
+    export_file = tmp_path / 'ratings.csv'
+    export_file.write_text(
+        'Const,Your Rating,Date Rated,Title Type\n'
+        'tt1234567,8,2020-01-02,Movie\n',
+        encoding='utf-8',
+    )
+    tracked_movie = {'id': 1, 'title': 'Already Tracked', 'release_date': None, 'runtime': None, 'watched': ''}
+    test_app.database.get_movies = MagicMock(return_value=[tracked_movie])
+    test_app.database.update_movie_external_ids = MagicMock(return_value=[1])
+    test_app.database.update_movie_watched = MagicMock(return_value=[1])
+    test_app.api.movie_external_ids = MagicMock(return_value={'imdb_id': 'tt1234567', 'wikidata_id': 'Q123'})
+
+    result = test_app.import_imdb_ratings(str(export_file))
+
+    assert result == (1, 0)
+    test_app.database.update_movie_external_ids.assert_called_once_with(1, {
+        'imdb_id': 'tt1234567', 'wikidata_id': 'Q123'
+    })
+    test_app.database.update_movie_watched.assert_called_once_with(1, True, datetime(2020, 1, 2))
+
+
+def test_import_imdb_ratings_rejects_missing_headers(test_app, tmp_path):
+    export_file = tmp_path / 'ratings.csv'
+    export_file.write_text('Const,Title\ntt1234567,Movie\n', encoding='utf-8')
+
+    with pytest.raises(ValueError, match='IMDb export must include'):
+        test_app.import_imdb_ratings(str(export_file))
+
+
+def test_movie_remove(test_app):
+    test_app.database.delete_movie = MagicMock(return_value=[1])
+
+    result = test_app.movie_remove(42)
+
+    test_app.database.delete_movie.assert_called_once_with(42)
+    assert result == [1]
+
+
+def test_movie_update_watched(test_app):
+    test_app.database.update_movie_watched = MagicMock(return_value=[1])
+    when = datetime(2020, 1, 1, 1, 0)
+
+    result = test_app.movie_update_watched(42, True, when)
+
+    test_app.database.update_movie_watched.assert_called_once_with(42, True, when)
+    assert result == [1]
 
 
 def test_config_get(test_app):
