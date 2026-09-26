@@ -6,6 +6,8 @@ from urllib.parse import urlencode, urlparse, urlunparse
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from ratelimit import limits, sleep_and_retry
+
 from showtime.types import MovieId, ShowId, TMDBMovie, TVMazeEpisode, TVMazeShow
 
 API_BASE_URL = "https://api.tvmaze.com"
@@ -87,53 +89,65 @@ class Api():
             )
         return {"Authorization": f"Bearer {self.tmdb_access_token}"}
 
+    @sleep_and_retry
+    @limits(calls=20, period=10)
+    def _tmdb_request(self, url: str, fields: Optional[dict[str, str]]=None) -> Any:
+        """Makes a rate-limited TMDB request"""
+        headers = self._tmdb_headers()
+        if fields is None:
+            return self.http.request('GET', url, headers=headers)
+        return self.http.request('GET', url, fields=fields, headers=headers)
+
+    @sleep_and_retry
+    @limits(calls=20, period=10)
+    def _tvmaze_request(self, url: str, fields: Optional[dict[str, str]]=None) -> Any:
+        """Makes a rate-limited TVMaze request"""
+        if fields is None:
+            return self.http.request('GET', url)
+        return self.http.request('GET', url, fields=fields)
+
     def episodes_list(self, show_id: ShowId) -> List[TVMazeEpisode]:
         """returns list of episodes for a show"""
-        response = self.http.request('GET', f"{API_BASE_URL}/shows/{show_id}/episodes")
+        response = self._tvmaze_request(f"{API_BASE_URL}/shows/{show_id}/episodes")
         raw_episodes = json.loads(response.data.decode('utf-8'))
         return list(map(episode_to_model, raw_episodes))
 
     def show_get(self, show_id: ShowId) -> Optional[TVMazeShow]:
         """returns show information"""
-        response = self.http.request('GET', f"{API_BASE_URL}/shows/{show_id}")
+        response = self._tvmaze_request(f"{API_BASE_URL}/shows/{show_id}")
         raw_show = json.loads(response.data.decode('utf-8'))
         return show_to_model(raw_show)
 
     def show_search(self, query: str) -> List[TVMazeShow]:
         """returns list of shows matching search string"""
-        response = self.http.request('GET', f"{API_BASE_URL}/search/shows", fields={'q': query})
+        response = self._tvmaze_request(f"{API_BASE_URL}/search/shows", fields={'q': query})
         raw_shows = json.loads(response.data.decode('utf-8'))
         return list(map(search_to_model, raw_shows))
 
     def movie_search(self, query: str) -> List[TMDBMovie]:
         """Returns movies matching the search string"""
-        response = self.http.request(
-            'GET', f"{TMDB_API_BASE_URL}/search/movie", fields={'query': query, 'include_adult': 'true'}, headers=self._tmdb_headers()
+        response = self._tmdb_request(
+            f"{TMDB_API_BASE_URL}/search/movie", fields={'query': query, 'include_adult': 'true'}
         )
         raw_movies = json.loads(response.data.decode('utf-8'))
         return list(map(movie_to_model, raw_movies['results']))
 
     def movie_get(self, movie_id: MovieId) -> TMDBMovie:
         """Returns movie information"""
-        response = self.http.request(
-            'GET', f"{TMDB_API_BASE_URL}/movie/{movie_id}", headers=self._tmdb_headers()
-        )
+        response = self._tmdb_request(f"{TMDB_API_BASE_URL}/movie/{movie_id}")
         raw_movie = json.loads(response.data.decode('utf-8'))
         return movie_to_model(raw_movie)
 
     def movie_external_ids(self, movie_id: MovieId) -> Dict[str, Optional[str]]:
         """Returns all external identifiers for a TMDB movie"""
-        response = self.http.request(
-            'GET', f"{TMDB_API_BASE_URL}/movie/{movie_id}/external_ids", headers=self._tmdb_headers()
-        )
+        response = self._tmdb_request(f"{TMDB_API_BASE_URL}/movie/{movie_id}/external_ids")
         raw_ids = json.loads(response.data.decode('utf-8'))
         return {key: value for key, value in raw_ids.items() if key != 'id'}
 
     def movie_find_by_imdb_id(self, imdb_id: str) -> Optional[MovieId]:
         """Returns the TMDB movie ID matching an IMDb identifier"""
-        response = self.http.request(
-            'GET', f"{TMDB_API_BASE_URL}/find/{imdb_id}",
-            fields={'external_source': 'imdb_id'}, headers=self._tmdb_headers()
+        response = self._tmdb_request(
+            f"{TMDB_API_BASE_URL}/find/{imdb_id}", fields={'external_source': 'imdb_id'}
         )
         result = json.loads(response.data.decode('utf-8'))
         movies = result.get('movie_results', [])

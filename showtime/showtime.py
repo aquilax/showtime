@@ -3,20 +3,12 @@ from datetime import date, datetime
 from typing import Callable, Dict, List, Optional, Set, Union, cast
 
 import dateutil.parser
-from ratelimit import limits, sleep_and_retry
 
 from showtime.api import Api
 from showtime.config import Config
 from showtime.database import Database, transaction, NOT_WATCHED_VALUE
 from showtime.types import (DecoratedEpisode, Episode, EpisodeId, Movie, MovieId, Show, ShowId, ShowWithCount,
                             TMDBMovie, TVMazeEpisode, TVMazeShow)
-
-
-@sleep_and_retry
-@limits(calls=20, period=10)
-def _get_episodes(api: Api, show_id: ShowId) -> List[TVMazeEpisode]:
-    """Downloads show information from API"""
-    return api.episodes_list(show_id)
 
 
 def needs_update(episode: Episode, tv_maze_episode: TVMazeEpisode):
@@ -232,7 +224,7 @@ class ShowtimeApp():
             with transaction(self.database) as transacted_db:
                 _show_id = transacted_db.add_show(show)
                 # add episodes to db
-                episodes = _get_episodes(self.api, _show_id)
+                episodes = self.api.episodes_list(_show_id)
                 self._sync_episodes(transacted_db, _show_id, episodes,
                                     on_insert=on_episode_insert, on_update=on_episode_update)
                 if on_show_added:
@@ -301,7 +293,7 @@ class ShowtimeApp():
                 tv_maze_show = self.api.show_get(show_id)
                 if tv_maze_show:
                     transacted_db.update_show(show_id, tv_maze_show)
-                    tv_maze_episodes = _get_episodes(self.api, show_id)
+                    tv_maze_episodes = self.api.episodes_list(show_id)
                     self._sync_episodes(transacted_db, show_id, tv_maze_episodes,
                                         on_insert=on_episode_insert, on_update=on_episode_update)
 
