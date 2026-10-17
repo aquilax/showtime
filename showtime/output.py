@@ -92,7 +92,7 @@ class Output():
             ])
         return str(Table(data, title='Movie Search Results').table)
 
-    def movies_table(self, movies: List[Movie]) -> str:
+    def movies_table(self, movies: List[Movie], title: str = 'Tracked Movies') -> str:
         """Formats tracked movies as a table"""
         data = [['ID', 'Title', 'Released', 'Language', 'Runtime', 'Watched']]
         for movie in movies:
@@ -104,7 +104,11 @@ class Output():
                 str(movie['runtime']) if movie['runtime'] is not None else '',
                 movie['watched'],
             ])
-        return str(Table(data, title='Tracked Movies').table)
+        return str(Table(data, title=title).table)
+
+    def movies_json(self, movies: List[Movie]) -> str:
+        """Formats movies as json"""
+        return json.dumps(movies, sort_keys=True, indent=4)
 
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""
@@ -136,7 +140,7 @@ class Output():
             ])
         return data
 
-    def format_unwatched(self, episodes: List[DecoratedEpisode]) -> str:
+    def format_unwatched(self, episodes: List[DecoratedEpisode], title: str = 'Episodes to watch') -> str:
         """Formats unwatched episodes as table"""
         data = []
         data.append([
@@ -158,7 +162,6 @@ class Output():
                 episode['airdate'],
                 episode['watched']
             ])
-        title = 'Episodes to watch'
         return str(Table(data, title=title).table)
 
     def shows_table(self, shows: List[Show]) -> str:

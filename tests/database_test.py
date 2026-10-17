@@ -1,6 +1,6 @@
 """Showtime Database Module Tests"""
 
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 from showtime.database import Database, get_memory_db, transaction
@@ -230,6 +230,18 @@ def test_get_watched_movies(test_database):
     test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
 
     result = test_database.get_watched_movies()
+
+    assert [movie['id'] for movie in result] == [42]
+
+
+def test_watched_movies_between(test_database):
+    test_database.add_movie(TMDBMovie(42, 'Watched Movie', None, 120))
+    test_database.add_movie(TMDBMovie(43, 'Another Movie', None, 90))
+    test_database.add_movie(TMDBMovie(44, 'Unwatched Movie', None, 80))
+    test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
+    test_database.update_movie_watched(43, True, datetime(2022, 1, 1, 1))
+
+    result = test_database.watched_movies_between(date(2021, 1, 1), date(2021, 12, 31))
 
     assert [movie['id'] for movie in result] == [42]
 

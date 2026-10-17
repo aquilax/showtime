@@ -138,6 +138,31 @@ class Showtime(Cmd):
         movies = self.app.movie_search(query)
         self.output.ppaged(self.output.movies_table(movies))
 
+    @cmd2.with_category(MOVIE_CATEGORY)
+    def do_movie_watched_between(self, statement: Statement) -> None:
+        """Show movies watched between two dates [movie_watched_between <from_date> <to_date> [format]]"""
+        try:
+            output_format = 'table'
+            split_arg = statement.split(' ')
+            if len(split_arg) < 3:
+                from_date_s, to_date_s = split_arg
+            else:
+                from_date_s, to_date_s, output_format = split_arg
+            from_date = dateutil.parser.parse(from_date_s).date()
+            to_date = dateutil.parser.parse(to_date_s).date()
+
+        except (dateutil.parser.ParserError, OverflowError):
+            self.output.perror("Invalid date")
+            return
+
+        movies = self.app.movies_watched_between(from_date, to_date)
+        sorted_movies = sorted(movies, key=lambda movie: movie['watched'])
+        if output_format == 'json':
+            movies_output = self.output.movies_json(sorted_movies)
+        else:
+            movies_output = self.output.movies_table(sorted_movies, title='Watched movies')
+        self.output.ppaged(movies_output)
+
     def _set_movie_watched(self, statement: Statement, watched: bool) -> None:
         movie_id = MovieId(statement)
         movie = self.app.movie_get(movie_id)
@@ -385,7 +410,7 @@ class Showtime(Cmd):
         if output_format == 'json':
             episodes_output = self.output.episodes_json(sorted_episodes)
         else:
-            episodes_output = self.output.format_unwatched(sorted_episodes)
+            episodes_output = self.output.format_unwatched(sorted_episodes, title='Watched episodes')
         self.output.ppaged(episodes_output)
 
     @cmd2.with_category(EPISODE_CATEGORY)

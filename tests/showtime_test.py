@@ -83,6 +83,16 @@ def test_episodes_watched_between(test_app):
     assert result == [decorated_episode]
 
 
+def test_movies_watched_between(test_app):
+    movies = [{'id': 42, 'title': 'Watched Movie', 'watched': '2020-05-01'}]
+    test_app.database.watched_movies_between = MagicMock(return_value=movies)
+
+    result = test_app.movies_watched_between(date(2020, 1, 1), date(2020, 12, 31))
+
+    test_app.database.watched_movies_between.assert_called_once_with(date(2020, 1, 1), date(2020, 12, 31))
+    assert result == movies
+
+
 def test_episodes_get(test_app):
     test_app.database.get_episodes = MagicMock(return_value=[episode])
 
