@@ -489,3 +489,13 @@ def test_watching_stats_rejects_invalid_period(test_app):
 
     assert 'Invalid period. Choose from: day, week, month, year' in str(out.stderr)
     test_app.app.episodes_get_watched.assert_not_called()
+
+
+@pytest.mark.parametrize(('text', 'expected'), [
+    ('', ['day', 'week', 'month', 'year']),
+    ('w', ['week']),
+    ('M', ['month']),
+    ('decade', []),
+])
+def test_complete_watching_stats(test_app, text, expected):
+    assert test_app.complete_watching_stats(text, '', 0, 0) == expected

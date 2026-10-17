@@ -22,6 +22,7 @@ from . import __version__
 SHOW_CATEGORY = 'Show management'
 EPISODE_CATEGORY = 'Episode management'
 MOVIE_CATEGORY = 'Movie management'
+WATCHING_STATS_PERIODS = ('day', 'week', 'month', 'year')
 
 
 class Showtime(Cmd):
@@ -83,6 +84,9 @@ class Showtime(Cmd):
 
     def complete_episodes(self, text: str, _line: int, _start_index: int, _end_index: int) -> List[str]:
         return [str(id) for id in self._show_ids if str(id).startswith(text)]
+
+    def complete_watching_stats(self, text: str, _line: int, _start_index: int, _end_index: int) -> List[str]:
+        return [period for period in WATCHING_STATS_PERIODS if period.startswith(text.lower())]
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_search(self, statement: Statement) -> None:
@@ -439,8 +443,9 @@ class Showtime(Cmd):
     def do_watching_stats(self, statement: Statement) -> None:
         """Show watch-time statistics for a period [watching_stats <day|week|month|year>]"""
         period = str(statement).strip().lower() or 'month'
-        if period not in {'day', 'week', 'month', 'year'}:
-            self.output.perror('Invalid period. Choose from: day, week, month, year')
+        if period not in WATCHING_STATS_PERIODS:
+            periods = ', '.join(WATCHING_STATS_PERIODS)
+            self.output.perror(f'Invalid period. Choose from: {periods}')
             return
 
         watched = self.app.episodes_get_watched()
