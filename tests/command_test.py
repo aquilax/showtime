@@ -375,13 +375,41 @@ def test_watched_between(test_app):
     test_app.app.episodes_watched_between.assert_called_once_with(date(2020, 1, 1), date(2021, 1, 1))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Episodes to watch-----+-----+-------------------+------------+---------+
++Watched episodes+-----+-----+-------------------+------------+---------+
 | ID | Show      | S   | E   | Name              | Aired      | Watched |
 +----+-----------+-----+-----+-------------------+------------+---------+
 | 1  | test-show | S01 | E01 | The first episode | 2020-01-01 |         |
 +----+-----------+-----+-----+-------------------+------------+---------+
 """.strip()
     assert out.data is None
+
+
+def test_movie_watched_between(test_app):
+    movie = {
+        'id': 42,
+        'title': 'Test Movie',
+        'release_date': '2020-01-01',
+        'runtime': 120,
+        'watched': '2020-06-01',
+        'original_language': 'en',
+    }
+    test_app.app.movies_watched_between = MagicMock(return_value=[movie])
+
+    out = test_app.app_cmd('movie_watched_between 2020-01-01 2021-01-01')
+
+    test_app.app.movies_watched_between.assert_called_once_with(date(2020, 1, 1), date(2021, 1, 1))
+    assert 'Watched movies' in str(out.stdout)
+    assert 'Test Movie' in str(out.stdout)
+    assert '2020-06-01' in str(out.stdout)
+
+
+def test_movie_watched_between_json(test_app):
+    movie = {'id': 42, 'title': 'Test Movie', 'watched': '2020-06-01'}
+    test_app.app.movies_watched_between = MagicMock(return_value=[movie])
+
+    out = test_app.app_cmd('movie_watched_between 2020-01-01 2021-01-01 json')
+
+    assert '"title": "Test Movie"' in str(out.stdout)
 
 
 def test_new_unwatched(test_app):
@@ -402,19 +430,62 @@ def test_new_unwatched(test_app):
 
 
 def test_watching_stats(test_app):
-    test_app.app.episodes_get_watched = MagicMock(return_value=[episode | {'watched': '2020-01-01'}])
+    test_app.app.episodes_get_watched = MagicMock(return_value=[
+        episode | {'watched': '2020-01-01', 'show_id': 1},
+        episode | {'watched': '2020-01-03', 'show_id': 1},
+        episode | {'watched': '2020-01-04', 'show_id': 2},
+    ])
+    test_app.app.movies_get_watched = MagicMock(return_value=[
+        {'id': 42, 'title': 'Test Movie', 'runtime': 120, 'watched': '2020-01-02'},
+        {'id': 43, 'title': 'Unknown Runtime', 'runtime': None, 'watched': '2020-02-01'},
+    ])
 
     out = test_app.app_cmd("watching_stats")
 
     test_app.app.episodes_get_watched.assert_called_once()
+    test_app.app.movies_get_watched.assert_called_once()
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-Total watched episodes: 1
-Total watchtime in minutes: 60
-+Watchtime per month-+---------+
-| Month   | Episodes | Minutes |
-+---------+----------+---------+
-| 2020-01 |        1 |      60 |
-+---------+----------+---------+
+Total watched episodes: 3
+Total watched movies: 2
+Total watchtime in minutes: 300
++Watchtime per month---------+--------+---------+
+| Month   | Shows | Episodes | Movies | Minutes |
++---------+-------+----------+--------+---------+
+| 2020-01 |     2 |        3 |      1 |     300 |
+| 2020-02 |     0 |        0 |      1 |       0 |
++---------+-------+----------+--------+---------+
 """.strip()
     assert out.data is None
+
+
+@pytest.mark.parametrize(('period', 'expected_groups'), [
+    ('day', ['2019-12-31', '2020-01-01', '2020-01-08']),
+    ('week', ['2020-W01', '2020-W02']),
+    ('month', ['2019-12', '2020-01']),
+    ('year', ['2019', '2020']),
+])
+def test_watching_stats_periods(test_app, period, expected_groups):
+    test_app.app.episodes_get_watched = MagicMock(return_value=[
+        episode | {'watched': '2019-12-31', 'show_id': 1},
+        episode | {'watched': '2020-01-01', 'show_id': 1},
+        episode | {'watched': '2020-01-08', 'show_id': 2},
+    ])
+    test_app.app.movies_get_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd(f'watching_stats {period}')
+
+    output = str(out.stdout)
+    assert f'Watchtime per {period}' in output
+    assert f'| {period.capitalize()}' in output
+    for group in expected_groups:
+        assert f'| {group}' in output
+
+
+def test_watching_stats_rejects_invalid_period(test_app):
+    test_app.app.episodes_get_watched = MagicMock()
+
+    out = test_app.app_cmd('watching_stats decade')
+
+    assert 'Invalid period. Choose from: day, week, month, year' in str(out.stderr)
+    test_app.app.episodes_get_watched.assert_not_called()

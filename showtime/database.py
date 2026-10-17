@@ -94,6 +94,16 @@ class Database(TinyDB):
         """Returns movies sorted by title"""
         return cast(List[Movie], sorted(self.table(MOVIE).all(), key=lambda movie: movie['title'].lower()))
 
+    def get_watched_movies(self) -> List[Movie]:
+        """Returns all watched movies"""
+        return cast(List[Movie], self.table(MOVIE).search(where('watched') != NOT_WATCHED_VALUE))
+
+    def watched_movies_between(self, from_date: date, to_date: date) -> List[Movie]:
+        """Returns movies watched between two dates"""
+        def is_between(in_date):
+            return _test_between(in_date, from_date, to_date)
+        return cast(List[Movie], self.table(MOVIE).search(where('watched').test(is_between)))
+
     def get_movie(self, movie_id: MovieId) -> Optional[Movie]:
         """Returns a single movie"""
         return cast(Optional[Movie], self.table(MOVIE).get(where('id') == movie_id))

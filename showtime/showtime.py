@@ -166,6 +166,14 @@ class ShowtimeApp():
         """Returns a tracked movie"""
         return self.database.get_movie(movie_id)
 
+    def movies_get_watched(self) -> List[Movie]:
+        """Returns all watched movies"""
+        return self.database.get_watched_movies()
+
+    def movies_watched_between(self, from_date: date, to_date: date) -> List[Movie]:
+        """Returns watched movies between two dates"""
+        return self.database.watched_movies_between(from_date, to_date)
+
     def movie_remove(self, movie_id: MovieId) -> List[int]:
         """Removes a tracked movie"""
         with transaction(self.database) as transacted_db:
