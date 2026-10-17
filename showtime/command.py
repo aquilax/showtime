@@ -418,13 +418,18 @@ class Showtime(Cmd):
         episode_minutes = sum(ep['runtime'] or 0 for ep in watched)
         movie_minutes = sum(movie['runtime'] or 0 for movie in watched_movies)
         minutes = episode_minutes + movie_minutes
+        shows_by_month: Dict[str, set[int]] = {}
 
         def month_grouper(acc: Dict[str, Dict[str, int]], episode: Episode) -> Dict[str, Dict[str, int]]:
             """Groups watched episodes by month"""
             month = episode['watched'][0:7]
             runtime = episode['runtime'] if episode['runtime'] else 0
             if not month in acc:
-                acc[month] = {'episodes': 0, 'movies': 0, 'minutes': 0}
+                acc[month] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
+            watched_shows = shows_by_month.setdefault(month, set())
+            if episode['show_id'] not in watched_shows:
+                watched_shows.add(episode['show_id'])
+                acc[month]['shows'] = acc[month]['shows'] + 1
             acc[month]['episodes'] = acc[month]['episodes'] + 1
             acc[month]['minutes'] = acc[month]['minutes'] + runtime
             return acc
@@ -434,7 +439,7 @@ class Showtime(Cmd):
             month = movie['watched'][0:7]
             runtime = movie['runtime'] if movie['runtime'] else 0
             if not month in acc:
-                acc[month] = {'episodes': 0, 'movies': 0, 'minutes': 0}
+                acc[month] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
             acc[month]['movies'] = acc[month]['movies'] + 1
             acc[month]['minutes'] = acc[month]['minutes'] + runtime
             return acc

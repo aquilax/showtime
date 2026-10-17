@@ -402,7 +402,11 @@ def test_new_unwatched(test_app):
 
 
 def test_watching_stats(test_app):
-    test_app.app.episodes_get_watched = MagicMock(return_value=[episode | {'watched': '2020-01-01'}])
+    test_app.app.episodes_get_watched = MagicMock(return_value=[
+        episode | {'watched': '2020-01-01', 'show_id': 1},
+        episode | {'watched': '2020-01-03', 'show_id': 1},
+        episode | {'watched': '2020-01-04', 'show_id': 2},
+    ])
     test_app.app.movies_get_watched = MagicMock(return_value=[
         {'id': 42, 'title': 'Test Movie', 'runtime': 120, 'watched': '2020-01-02'},
         {'id': 43, 'title': 'Unknown Runtime', 'runtime': None, 'watched': '2020-02-01'},
@@ -414,14 +418,14 @@ def test_watching_stats(test_app):
     test_app.app.movies_get_watched.assert_called_once()
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-Total watched episodes: 1
+Total watched episodes: 3
 Total watched movies: 2
-Total watchtime in minutes: 180
-+Watchtime per month-+--------+---------+
-| Month   | Episodes | Movies | Minutes |
-+---------+----------+--------+---------+
-| 2020-01 |        1 |      1 |     180 |
-| 2020-02 |        0 |      1 |       0 |
-+---------+----------+--------+---------+
+Total watchtime in minutes: 300
++Watchtime per month---------+--------+---------+
+| Month   | Shows | Episodes | Movies | Minutes |
++---------+-------+----------+--------+---------+
+| 2020-01 |     2 |        3 |      1 |     300 |
+| 2020-02 |     0 |        0 |      1 |       0 |
++---------+-------+----------+--------+---------+
 """.strip()
     assert out.data is None

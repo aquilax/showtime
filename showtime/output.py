@@ -236,6 +236,7 @@ class Output():
         data = []
         data.append([
             'Month',
+            'Shows',
             'Episodes',
             'Movies',
             'Minutes',
@@ -243,6 +244,7 @@ class Output():
         for date in sorted(month_totals.keys()):
             data.append([
                 date,
+                str(month_totals[date]['shows']),
                 str(month_totals[date]['episodes']),
                 str(month_totals[date]['movies']),
                 str(month_totals[date]['minutes']),
@@ -252,6 +254,7 @@ class Output():
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
         table.justify_columns[3] = 'right'
+        table.justify_columns[4] = 'right'
         return str(table.table)
 
     def episodes_json(self, episodes: List[DecoratedEpisode]) -> str:
