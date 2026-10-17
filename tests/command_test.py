@@ -429,3 +429,35 @@ Total watchtime in minutes: 300
 +---------+-------+----------+--------+---------+
 """.strip()
     assert out.data is None
+
+
+@pytest.mark.parametrize(('period', 'expected_groups'), [
+    ('day', ['2019-12-31', '2020-01-01', '2020-01-08']),
+    ('week', ['2020-W01', '2020-W02']),
+    ('month', ['2019-12', '2020-01']),
+    ('year', ['2019', '2020']),
+])
+def test_watching_stats_periods(test_app, period, expected_groups):
+    test_app.app.episodes_get_watched = MagicMock(return_value=[
+        episode | {'watched': '2019-12-31', 'show_id': 1},
+        episode | {'watched': '2020-01-01', 'show_id': 1},
+        episode | {'watched': '2020-01-08', 'show_id': 2},
+    ])
+    test_app.app.movies_get_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd(f'watching_stats {period}')
+
+    output = str(out.stdout)
+    assert f'Watchtime per {period}' in output
+    assert f'| {period.capitalize()}' in output
+    for group in expected_groups:
+        assert f'| {group}' in output
+
+
+def test_watching_stats_rejects_invalid_period(test_app):
+    test_app.app.episodes_get_watched = MagicMock()
+
+    out = test_app.app_cmd('watching_stats decade')
+
+    assert 'Invalid period. Choose from: day, week, month, year' in str(out.stderr)
+    test_app.app.episodes_get_watched.assert_not_called()

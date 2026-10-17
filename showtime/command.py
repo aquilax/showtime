@@ -411,45 +411,62 @@ class Showtime(Cmd):
         """Update watch times from csv file"""
         self.app.episodes_patch_watchtime(file_name)
 
-    def do_watching_stats(self, _: Statement) -> None:
-        """Statistics about watchtime"""
+    def do_watching_stats(self, statement: Statement) -> None:
+        """Statistics about watchtime [watching_stats <day|week|month|year>]"""
+        period = str(statement).strip().lower() or 'month'
+        if period not in {'day', 'week', 'month', 'year'}:
+            self.output.perror('Invalid period. Choose from: day, week, month, year')
+            return
+
         watched = self.app.episodes_get_watched()
         watched_movies = self.app.movies_get_watched()
         episode_minutes = sum(ep['runtime'] or 0 for ep in watched)
         movie_minutes = sum(movie['runtime'] or 0 for movie in watched_movies)
         minutes = episode_minutes + movie_minutes
-        shows_by_month: Dict[str, set[int]] = {}
+
+        def period_key(watched_at: str) -> str:
+            watched_date = dateutil.parser.parse(watched_at).date()
+            if period == 'day':
+                return watched_date.isoformat()
+            if period == 'week':
+                iso_year, iso_week, _ = watched_date.isocalendar()
+                return f'{iso_year}-W{iso_week:02}'
+            if period == 'year':
+                return str(watched_date.year)
+            return watched_date.strftime('%Y-%m')
+
+        shows_by_period: Dict[str, set[int]] = {}
 
         def month_grouper(acc: Dict[str, Dict[str, int]], episode: Episode) -> Dict[str, Dict[str, int]]:
-            """Groups watched episodes by month"""
-            month = episode['watched'][0:7]
+            """Groups watched episodes by the selected period"""
+            group = period_key(episode['watched'])
             runtime = episode['runtime'] if episode['runtime'] else 0
-            if not month in acc:
-                acc[month] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
-            watched_shows = shows_by_month.setdefault(month, set())
+            if group not in acc:
+                acc[group] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
+            watched_shows = shows_by_period.setdefault(group, set())
             if episode['show_id'] not in watched_shows:
                 watched_shows.add(episode['show_id'])
-                acc[month]['shows'] = acc[month]['shows'] + 1
-            acc[month]['episodes'] = acc[month]['episodes'] + 1
-            acc[month]['minutes'] = acc[month]['minutes'] + runtime
+                acc[group]['shows'] = acc[group]['shows'] + 1
+            acc[group]['episodes'] = acc[group]['episodes'] + 1
+            acc[group]['minutes'] = acc[group]['minutes'] + runtime
             return acc
 
         def movie_month_grouper(acc: Dict[str, Dict[str, int]], movie: Movie) -> Dict[str, Dict[str, int]]:
-            """Groups watched movies by month"""
-            month = movie['watched'][0:7]
+            """Groups watched movies by the selected period"""
+            group = period_key(movie['watched'])
             runtime = movie['runtime'] if movie['runtime'] else 0
-            if not month in acc:
-                acc[month] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
-            acc[month]['movies'] = acc[month]['movies'] + 1
-            acc[month]['minutes'] = acc[month]['minutes'] + runtime
+            if group not in acc:
+                acc[group] = {'shows': 0, 'episodes': 0, 'movies': 0, 'minutes': 0}
+            acc[group]['movies'] = acc[group]['movies'] + 1
+            acc[group]['minutes'] = acc[group]['minutes'] + runtime
             return acc
 
-        month_totals: Dict[str, Dict[str, int]] = reduce(month_grouper, watched, {})
-        month_totals = reduce(movie_month_grouper, watched_movies, month_totals)
+        period_totals: Dict[str, Dict[str, int]] = reduce(month_grouper, watched, {})
+        period_totals = reduce(movie_month_grouper, watched_movies, period_totals)
         self.output.poutput(f"Total watched episodes: {len(watched)}")
         self.output.poutput(f"Total watched movies: {len(watched_movies)}")
         self.output.poutput(f"Total watchtime in minutes: {minutes}")
-        summary_table = self.output.summary_table(month_totals)
+        summary_table = self.output.summary_table(period_totals, period)
         self.output.ppaged(summary_table)
 
     @cmd2.with_category(SHOW_CATEGORY)

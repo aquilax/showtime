@@ -231,25 +231,25 @@ class Output():
         table.justify_columns[1] = 'right'
         return str(table.table)
 
-    def summary_table(self, month_totals: Dict[str, Dict[str, int]]) -> str:
+    def summary_table(self, period_totals: Dict[str, Dict[str, int]], period: str = 'month') -> str:
         """Formats summary as a table"""
         data = []
         data.append([
-            'Month',
+            period.capitalize(),
             'Shows',
             'Episodes',
             'Movies',
             'Minutes',
         ])
-        for date in sorted(month_totals.keys()):
+        for date in sorted(period_totals.keys()):
             data.append([
                 date,
-                str(month_totals[date]['shows']),
-                str(month_totals[date]['episodes']),
-                str(month_totals[date]['movies']),
-                str(month_totals[date]['minutes']),
+                str(period_totals[date]['shows']),
+                str(period_totals[date]['episodes']),
+                str(period_totals[date]['movies']),
+                str(period_totals[date]['minutes']),
             ])
-        title = 'Watchtime per month'
+        title = f'Watchtime per {period}'
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
