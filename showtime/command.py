@@ -15,7 +15,7 @@ from showtime.config import Config
 from showtime.database import get_cashed_write_db, get_memory_db
 from showtime.output import Output
 from showtime.showtime import ShowtimeApp
-from showtime.types import Episode, EpisodeId, MovieId, Show, ShowId
+from showtime.types import Episode, EpisodeId, Movie, MovieId, Show, ShowId
 
 from . import __version__
 
@@ -414,21 +414,35 @@ class Showtime(Cmd):
     def do_watching_stats(self, _: Statement) -> None:
         """Statistics about watchtime"""
         watched = self.app.episodes_get_watched()
-        minutes = reduce(
-            (lambda acc, ep: acc + ep['runtime'] if ep['runtime'] else 0), watched, 0)
+        watched_movies = self.app.movies_get_watched()
+        episode_minutes = sum(ep['runtime'] or 0 for ep in watched)
+        movie_minutes = sum(movie['runtime'] or 0 for movie in watched_movies)
+        minutes = episode_minutes + movie_minutes
 
         def month_grouper(acc: Dict[str, Dict[str, int]], episode: Episode) -> Dict[str, Dict[str, int]]:
             """Groups watched episodes by month"""
             month = episode['watched'][0:7]
             runtime = episode['runtime'] if episode['runtime'] else 0
             if not month in acc:
-                acc[month] = {'episodes': 0, 'minutes': 0}
+                acc[month] = {'episodes': 0, 'movies': 0, 'minutes': 0}
             acc[month]['episodes'] = acc[month]['episodes'] + 1
             acc[month]['minutes'] = acc[month]['minutes'] + runtime
             return acc
 
+        def movie_month_grouper(acc: Dict[str, Dict[str, int]], movie: Movie) -> Dict[str, Dict[str, int]]:
+            """Groups watched movies by month"""
+            month = movie['watched'][0:7]
+            runtime = movie['runtime'] if movie['runtime'] else 0
+            if not month in acc:
+                acc[month] = {'episodes': 0, 'movies': 0, 'minutes': 0}
+            acc[month]['movies'] = acc[month]['movies'] + 1
+            acc[month]['minutes'] = acc[month]['minutes'] + runtime
+            return acc
+
         month_totals: Dict[str, Dict[str, int]] = reduce(month_grouper, watched, {})
+        month_totals = reduce(movie_month_grouper, watched_movies, month_totals)
         self.output.poutput(f"Total watched episodes: {len(watched)}")
+        self.output.poutput(f"Total watched movies: {len(watched_movies)}")
         self.output.poutput(f"Total watchtime in minutes: {minutes}")
         summary_table = self.output.summary_table(month_totals)
         self.output.ppaged(summary_table)

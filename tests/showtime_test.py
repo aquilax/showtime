@@ -360,6 +360,16 @@ def test_episodes_get_watched(test_app):
     assert result == [episode]
 
 
+def test_movies_get_watched(test_app):
+    watched_movies = [{'id': 42, 'title': 'Test Movie', 'runtime': 120, 'watched': '2020-01-01'}]
+    test_app.database.get_watched_movies = MagicMock(return_value=watched_movies)
+
+    result = test_app.movies_get_watched()
+
+    test_app.database.get_watched_movies.assert_called_once()
+    assert result == watched_movies
+
+
 def test_show_follow(test_app):
     test_app.database.get_active_shows = MagicMock(return_value=[show])
     test_app.api.show_get = MagicMock(return_value=tv_maze_show)

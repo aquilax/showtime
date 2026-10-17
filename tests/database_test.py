@@ -224,6 +224,16 @@ def test_get_watched_episodes(test_database):
     assert result == []
 
 
+def test_get_watched_movies(test_database):
+    test_database.add_movie(TMDBMovie(42, 'Watched Movie', None, 120))
+    test_database.add_movie(TMDBMovie(43, 'Unwatched Movie', None, 90))
+    test_database.update_movie_watched(42, True, datetime(2021, 1, 1, 1))
+
+    result = test_database.get_watched_movies()
+
+    assert [movie['id'] for movie in result] == [42]
+
+
 def test_get_all_episodes(test_database):
     result = test_database.get_all_episodes()
     assert list(result) == []

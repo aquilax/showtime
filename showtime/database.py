@@ -94,6 +94,10 @@ class Database(TinyDB):
         """Returns movies sorted by title"""
         return cast(List[Movie], sorted(self.table(MOVIE).all(), key=lambda movie: movie['title'].lower()))
 
+    def get_watched_movies(self) -> List[Movie]:
+        """Returns all watched movies"""
+        return cast(List[Movie], self.table(MOVIE).search(where('watched') != NOT_WATCHED_VALUE))
+
     def get_movie(self, movie_id: MovieId) -> Optional[Movie]:
         """Returns a single movie"""
         return cast(Optional[Movie], self.table(MOVIE).get(where('id') == movie_id))

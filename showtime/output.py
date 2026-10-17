@@ -237,18 +237,21 @@ class Output():
         data.append([
             'Month',
             'Episodes',
+            'Movies',
             'Minutes',
         ])
         for date in sorted(month_totals.keys()):
             data.append([
                 date,
                 str(month_totals[date]['episodes']),
+                str(month_totals[date]['movies']),
                 str(month_totals[date]['minutes']),
             ])
         title = 'Watchtime per month'
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
+        table.justify_columns[3] = 'right'
         return str(table.table)
 
     def episodes_json(self, episodes: List[DecoratedEpisode]) -> str:
