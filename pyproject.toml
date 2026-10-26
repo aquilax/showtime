@@ -26,7 +26,6 @@ dependencies = [
     "ratelimit==2.2.1",
     "tinydb==4.9.0",
     "terminaltables==3.1.10",
-    "python-dateutil==2.9.0.post0",
     "typing-extensions==4.16.0",
 ]
 
@@ -43,7 +42,6 @@ test = [
     "pytest-cov>=4.0",
     "mypy>=1.0",
     "ratelimit-stubs>=0.2",
-    "types-python-dateutil>=2.8",
     "types-requests>=2.28",
     "tox>=4.0",
     "interrogate>=1.5",

@@ -367,6 +367,21 @@ def test_export(test_app):
     assert out.data is None
 
 
+def test_export_accepts_iso_datetime(test_app):
+    test_app.app.episodes_watched_between = MagicMock(return_value=[])
+
+    test_app.app_cmd("export 2020-01-01T12:30:00 2021-01-01T12:30:00")
+
+    test_app.app.episodes_watched_between.assert_called_once_with(date(2020, 1, 1), date(2021, 1, 1))
+
+
+@pytest.mark.parametrize('command', ['export', 'watched_between', 'movie_watched_between'])
+def test_date_commands_reject_non_iso_dates(test_app, command):
+    out = test_app.app_cmd(f'{command} January-1-2020 2021-01-01')
+
+    assert 'Invalid date' in str(out.stderr)
+
+
 def test_watched_between(test_app):
     test_app.app.episodes_watched_between = MagicMock(return_value=[decorated_episode])
 

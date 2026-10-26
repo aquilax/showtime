@@ -210,13 +210,28 @@ def test_get_unwatched(test_database):
 
 
 def test_seen_between(test_database):
-    result = test_database.seen_between(datetime(2021, 1, 1, 1), datetime(2022, 1, 1, 1))
-    assert result == []
+    show_id = test_database.add_show(get_tv_maze_show())
+    test_database.add_episode(show_id, get_tv_maze_episode(id=1))
+    test_database.add_episode(show_id, get_tv_maze_episode(id=2))
+    test_database.add_episode(show_id, get_tv_maze_episode(id=3))
+    test_database.update_watched(1, True, datetime(2021, 1, 1, 1, 0))
+    test_database.update_watched(2, True, datetime(2020, 12, 31, 23, 0))
+    test_database.update_watched(3, True, datetime(2022, 1, 1, 0, 0))
+
+    result = test_database.seen_between(date(2021, 1, 1), date(2022, 1, 1))
+
+    assert [episode['id'] for episode in result] == [1, 3]
 
 
 def test_aired_unseen_between(test_database):
-    result = test_database.aired_unseen_between(datetime(2021, 1, 1, 1), datetime(2022, 1, 1, 1))
-    assert result == []
+    show_id = test_database.add_show(get_tv_maze_show())
+    test_database.add_episode(show_id, get_tv_maze_episode(id=1, airdate='2021-01-01'))
+    test_database.add_episode(show_id, get_tv_maze_episode(id=2, airdate='2020-12-31'))
+    test_database.add_episode(show_id, get_tv_maze_episode(id=3, airdate='2022-01-01'))
+
+    result = test_database.aired_unseen_between(date(2021, 1, 1), date(2022, 1, 1))
+
+    assert [episode['id'] for episode in result] == [1, 3]
 
 
 def test_get_watched_episodes(test_database):

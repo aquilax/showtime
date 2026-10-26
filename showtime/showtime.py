@@ -1,8 +1,6 @@
 import csv
 from datetime import date, datetime
-from typing import Callable, Dict, List, Optional, Set, Union, cast
-
-import dateutil.parser
+from typing import Callable, Dict, List, Optional, Set, TextIO, Union, cast
 
 from showtime.api import Api
 from showtime.config import Config
@@ -128,8 +126,8 @@ class ShowtimeApp():
                         continue
 
                     try:
-                        watched_at = dateutil.parser.parse(date_rated)
-                    except (dateutil.parser.ParserError, OverflowError):
+                        watched_at = datetime.fromisoformat(date_rated)
+                    except (ValueError, OverflowError):
                         skipped += 1
                         if on_progress:
                             on_progress(f"Skipped {row_number}/{total_rows}: {title} (invalid date)")
@@ -305,15 +303,14 @@ class ShowtimeApp():
                     self._sync_episodes(transacted_db, show_id, tv_maze_episodes,
                                         on_insert=on_episode_insert, on_update=on_episode_update)
 
-    def episodes_patch_watchtime(self, file_name: str) -> None:
-        """Patches episodes watch time from external file"""
-        with open(file_name, newline='', encoding='UTF-8') as csv_file:
-            reader = csv.reader(csv_file, delimiter=',')
-            with transaction(self.database) as transacted_db:
-                for row in reader:
-                    episode_id = EpisodeId(row[0])
-                    when = dateutil.parser.parse(row[1])
-                    transacted_db.update_watched(episode_id, True, when)
+    def episodes_patch_watchtime(self, csv_file: TextIO) -> None:
+        """Patches episodes watch time from a CSV stream"""
+        reader = csv.reader(csv_file, delimiter=',')
+        with transaction(self.database) as transacted_db:
+            for row in reader:
+                episode_id = EpisodeId(row[0])
+                when = datetime.fromisoformat(row[1])
+                transacted_db.update_watched(episode_id, True, when)
 
     def show_search_api(self, query: str) -> List[TVMazeShow]:
         """Searches tvmaze for show name"""

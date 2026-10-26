@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from typing import (Any, Iterator, Tuple, Dict, Generator, List,  Optional, cast)
 
-import dateutil.parser
 from tinydb import TinyDB, where
 from tinydb.middlewares import CachingMiddleware
 from tinydb.queries import QueryLike
@@ -22,7 +21,7 @@ NOT_WATCHED_VALUE = ''
 
 def _test_between(in_date: str, from_date: date, to_date: date) -> bool:
     """Returns true if date is between from_date and to_date"""
-    return from_date <= dateutil.parser.parse(in_date).date() <= to_date if in_date else False
+    return from_date <= datetime.fromisoformat(in_date).date() <= to_date if in_date else False
 
 
 class Database(TinyDB):
