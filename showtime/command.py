@@ -7,7 +7,6 @@ from functools import reduce
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import cmd2
-import dateutil.parser
 from cmd2 import Cmd, Statement
 
 from showtime.api import Api, get_default_pool_manager
@@ -152,10 +151,10 @@ class Showtime(Cmd):
                 from_date_s, to_date_s = split_arg
             else:
                 from_date_s, to_date_s, output_format = split_arg
-            from_date = dateutil.parser.parse(from_date_s).date()
-            to_date = dateutil.parser.parse(to_date_s).date()
+            from_date = datetime.fromisoformat(from_date_s).date()
+            to_date = datetime.fromisoformat(to_date_s).date()
 
-        except (dateutil.parser.ParserError, OverflowError):
+        except (ValueError, OverflowError):
             self.output.perror("Invalid date")
             return
 
@@ -382,10 +381,10 @@ class Showtime(Cmd):
         """Export watched episodes between two dates [export <from_date> <to_date>]"""
         try:
             from_date_s, to_date_s = statement.split(' ')
-            from_date = dateutil.parser.parse(from_date_s).date()
-            to_date = dateutil.parser.parse(to_date_s).date()
+            from_date = datetime.fromisoformat(from_date_s).date()
+            to_date = datetime.fromisoformat(to_date_s).date()
 
-        except (dateutil.parser.ParserError, OverflowError):
+        except (ValueError, OverflowError):
             self.output.perror("Invalid date")
             return
 
@@ -402,10 +401,10 @@ class Showtime(Cmd):
                 from_date_s, to_date_s = split_arg
             else:
                 from_date_s, to_date_s, output_format = split_arg
-            from_date = dateutil.parser.parse(from_date_s).date()
-            to_date = dateutil.parser.parse(to_date_s).date()
+            from_date = datetime.fromisoformat(from_date_s).date()
+            to_date = datetime.fromisoformat(to_date_s).date()
 
-        except (dateutil.parser.ParserError, OverflowError):
+        except (ValueError, OverflowError):
             self.output.perror("Invalid date")
             return
 
@@ -422,7 +421,7 @@ class Showtime(Cmd):
         """Show unwatched episodes aired in the last 7 days by default [new_unwatched <days>]"""
         spl_statement = statement.split(' ')
         days = int(spl_statement[0]) if len(spl_statement) > 0 and spl_statement[0] != '' else 7
-        d_start_date = dateutil.parser.parse(spl_statement[1]).date() if len(spl_statement) > 1 else date.today()
+        d_start_date = datetime.fromisoformat(spl_statement[1]).date() if len(spl_statement) > 1 else date.today()
 
         delta = timedelta(days=days - 1)
         from_date = d_start_date - delta
@@ -438,7 +437,8 @@ class Showtime(Cmd):
 
     def do_patch_watchtime(self, file_name: Statement) -> None:
         """Update episode watch times from a CSV file [patch_watchtime <file>]"""
-        self.app.episodes_patch_watchtime(file_name)
+        with open(file_name, newline='', encoding='UTF-8') as csv_file:
+            self.app.episodes_patch_watchtime(csv_file)
 
     def do_watching_stats(self, statement: Statement) -> None:
         """Show watch-time statistics for a period [watching_stats <day|week|month|year>]"""
@@ -455,7 +455,7 @@ class Showtime(Cmd):
         minutes = episode_minutes + movie_minutes
 
         def period_key(watched_at: str) -> str:
-            watched_date = dateutil.parser.parse(watched_at).date()
+            watched_date = datetime.fromisoformat(watched_at).date()
             if period == 'day':
                 return watched_date.isoformat()
             if period == 'week':

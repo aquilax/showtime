@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from io import StringIO
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
@@ -233,6 +234,22 @@ def test_import_imdb_ratings_rejects_missing_headers(test_app, tmp_path):
         test_app.import_imdb_ratings(str(export_file))
 
 
+def test_import_imdb_ratings_skips_non_iso_date(test_app, tmp_path):
+    export_file = tmp_path / 'ratings.csv'
+    export_file.write_text(
+        'Const,Your Rating,Date Rated,Title Type\n'
+        'tt1234567,8,January 2 2020,Movie\n',
+        encoding='utf-8',
+    )
+    test_app.database.get_movies = MagicMock(return_value=[])
+
+    progress = []
+    result = test_app.import_imdb_ratings(str(export_file), on_progress=progress.append)
+
+    assert result == (0, 1)
+    assert 'Skipped 1/1: tt1234567 (invalid date)' in progress
+
+
 def test_movie_remove(test_app):
     test_app.database.delete_movie = MagicMock(return_value=[1])
 
@@ -418,4 +435,11 @@ def test_sync(test_app):
 
 
 def test_episodes_patch_watchtime(test_app):
-    pass
+    watchtimes = StringIO('1,2020-01-02T03:04:05+00:00\n')
+    test_app.database.update_watched = MagicMock(return_value=[1])
+
+    test_app.episodes_patch_watchtime(watchtimes)
+
+    test_app.database.update_watched.assert_called_once_with(
+        1, True, datetime.fromisoformat('2020-01-02T03:04:05+00:00')
+    )

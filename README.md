@@ -35,4 +35,8 @@ movie_import_imdb_ratings <filename>
 IMDb imports read the `Const`, `Your Rating`, `Date Rated`, and `Title Type`
 columns. Movie and TV Movie rows are resolved through TMDB, added if needed,
 and marked watched on their IMDb rating date. Other title types and unresolved
-IMDb IDs are skipped.
+IMDb IDs are skipped. Date arguments for `export`, `watched_between`,
+`movie_watched_between`, and `new_unwatched` use ISO 8601 dates such as
+`2020-01-31`; ISO 8601 timestamps are also accepted. The `patch_watchtime`
+CSV command accepts ISO 8601 timestamps, and IMDb `Date Rated` values must be
+ISO 8601 dates.
