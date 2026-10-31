@@ -258,7 +258,7 @@ class Output():
                 str(period_totals[date]['minutes']),
             ])
         title = f'Watchtime per {period}'
-        title = self.table_title('Completed shows', len(data) - 1)
+        title = self.table_title(title, len(data) - 1)
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
