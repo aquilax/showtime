@@ -1,7 +1,7 @@
 """Showtime Output  Module"""
 
 import json
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from terminaltables import AsciiTable as Table  # type: ignore
 
@@ -271,7 +271,7 @@ class Output():
         return json.dumps(episodes, sort_keys=True, indent=4)
 
 
-    def table_title(self, base_title: str, count: int = None) -> str:
+    def table_title(self, base_title: str, count: Optional[int] = None) -> str:
         """
         Generates a padded table title, optionally appending the item count.
 
