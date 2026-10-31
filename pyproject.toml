@@ -8,14 +8,13 @@ version = "0.3.27"
 description = "Command line show tracker using the TVMaze public API"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "MIT"}
+license = "MIT"
 authors = [{name = "Evgeniy Vasilev", email = "aquilax@gmail.com"}]
 keywords = ["tv", "commandline", "application", "show", "tvmaze"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
