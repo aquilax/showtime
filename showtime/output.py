@@ -77,7 +77,7 @@ class Output():
                 show.status,
                 show.url
             ])
-        title = self.table_title('Search Results', search_result.count)
+        title = self.table_title('Search Results', len(search_result))
         return str(Table(data, title=title).table)
 
     def format_movie_search_results(self, search_result: List[TMDBMovie]) -> str:
@@ -91,7 +91,7 @@ class Output():
                 movie.original_language or '',
                 str(movie.runtime) if movie.runtime is not None else '',
             ])
-        title = self.table_title('Movie Search Results', search_result.count)
+        title = self.table_title('Movie Search Results', len(search_result))
         return str(Table(data, title=title).table)
 
     def movies_table(self, movies: List[Movie], title: str = 'Tracked Movies') -> str:
@@ -106,7 +106,7 @@ class Output():
                 str(movie['runtime']) if movie['runtime'] is not None else '',
                 movie['watched'],
             ])
-        title = self.table_title(title, movies.count)
+        title = self.table_title(title, len(movies))
         return str(Table(data, title=title).table)
 
     def movies_json(self, movies: List[Movie]) -> str:
@@ -116,7 +116,7 @@ class Output():
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""
         title = f"({show['id']}) {show['name']} - {show['premiered']}"
-        title = self.table_title(title, episodes.count)
+        title = self.table_title(title, len(episodes))
         data = self._get_episodes_data(episodes)
         return str(Table(data, title=title).table)
 
@@ -166,7 +166,7 @@ class Output():
                 episode['airdate'],
                 episode['watched']
             ])
-        title = self.table_title(title, episodes.count)
+        title = self.table_title(title, len(episodes))
         return str(Table(data, title=title).table)
 
     def shows_table(self, shows: List[Show]) -> str:
@@ -185,7 +185,7 @@ class Output():
                 show['premiered'],
                 show['status'],
             ])
-        title = self.table_title('Followed shows', shows.count)
+        title = self.table_title('Followed shows', len(shows))
         return str(Table(data, title=title).table)
 
     def unfinished_shows_table(self, shows: List[ShowWithCount]) -> str:
@@ -210,7 +210,7 @@ class Output():
                 str(show['seen']),
                 str(show['total']-show['seen'])
             ])
-        title = self.table_title('Unfinished shows', shows.count)
+        title = self.table_title('Unfinished shows', len(shows))
         return str(Table(data, title=title).table)
 
     def completed_shows_table(self, shows: List[Show]) -> str:
@@ -233,7 +233,7 @@ class Output():
                 show['status'],
             ])
             i = i + 1
-        title = self.table_title('Completed shows', shows.count)
+        title = self.table_title('Completed shows', len(shows))
         table = Table(data, title=title)
         table.justify_columns[0] = 'right'
         table.justify_columns[1] = 'right'
@@ -258,7 +258,7 @@ class Output():
                 str(period_totals[date]['minutes']),
             ])
         title = f'Watchtime per {period}'
-        title = self.table_title('Completed shows', data.count)
+        title = self.table_title('Completed shows', len(data) - 1)
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
