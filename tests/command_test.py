@@ -58,7 +58,7 @@ def test_search(test_app):
     test_app.app.show_search_api.assert_called_with('show name')
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Search Results--+------------+-----------+--------------------------+
++ Search Results (1) ---------+-----------+--------------------------+
 | ID | Name      | Premiered  | StatusURL |                          |
 +----+-----------+------------+-----------+--------------------------+
 | 1  | test-show | 2020-01-01 | Ended     | https:/www.example.com/1 |
@@ -163,7 +163,7 @@ def test_episodes(test_app):
     test_app.app.episodes_get.assert_called_with(1)
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+(1) test-show - 2020-01-01----------+---------+------------+---------+
++ (1) test-show - 2020-01-01 (1) ----+---------+------------+---------+
 | ID | S   | E   | Name              | Runtime | Aired      | Watched |
 +----+-----+-----+-------------------+---------+------------+---------+
 | 1  | S01 | E01 | The first episode | 60      | 2020-01-01 |         |
@@ -199,7 +199,7 @@ def test_completed(test_app):
     test_app.app.show_get_completed.assert_called_with()
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Completed shows-----+------------+--------+
++ Completed shows (1) ------------+--------+
 | # | ID | Name      | Premiered  | Status |
 +---+----+-----------+------------+--------+
 | 1 |  1 | test-show | 2020-01-01 | Ended  |
@@ -322,7 +322,7 @@ def test_unwatched(test_app):
     test_app.app.episodes_get_unwatched.assert_called_once_with(datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Episodes to watch-----+-----+-------------------+------------+---------+
++ Episodes to watch (1) -----+-------------------+------------+---------+
 | ID | Show      | S   | E   | Name              | Aired      | Watched |
 +----+-----------+-----+-----+-------------------+------------+---------+
 | 1  | test-show | S01 | E01 | The first episode | 2020-01-01 |         |
@@ -390,7 +390,7 @@ def test_watched_between(test_app):
     test_app.app.episodes_watched_between.assert_called_once_with(date(2020, 1, 1), date(2021, 1, 1))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Watched episodes+-----+-----+-------------------+------------+---------+
++ Watched episodes (1) +-----+-------------------+------------+---------+
 | ID | Show      | S   | E   | Name              | Aired      | Watched |
 +----+-----------+-----+-----+-------------------+------------+---------+
 | 1  | test-show | S01 | E01 | The first episode | 2020-01-01 |         |
@@ -435,7 +435,7 @@ def test_new_unwatched(test_app):
     test_app.app.episodes_aired_unseen_between.assert_called_once_with(date(2019, 12, 29), date(2020, 1, 1))
     assert isinstance(out, CommandResult)
     assert str(out.stdout).strip() == """
-+Episodes to watch-----+-----+-------------------+------------+---------+
++ Episodes to watch (1) -----+-------------------+------------+---------+
 | ID | Show      | S   | E   | Name              | Aired      | Watched |
 +----+-----------+-----+-----+-------------------+------------+---------+
 | 1  | test-show | S01 | E01 | The first episode | 2020-01-01 |         |
@@ -464,7 +464,7 @@ def test_watching_stats(test_app):
 Total watched episodes: 3
 Total watched movies: 2
 Total watchtime in minutes: 300
-+Watchtime per month---------+--------+---------+
++ Watchtime per month (2) ---+--------+---------+
 | Month   | Shows | Episodes | Movies | Minutes |
 +---------+-------+----------+--------+---------+
 | 2020-01 |     2 |        3 |      1 |     300 |

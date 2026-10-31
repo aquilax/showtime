@@ -1,7 +1,7 @@
 """Showtime Output  Module"""
 
 import json
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from terminaltables import AsciiTable as Table  # type: ignore
 
@@ -77,7 +77,8 @@ class Output():
                 show.status,
                 show.url
             ])
-        return str(Table(data, title='Search Results').table)
+        title = self.table_title('Search Results', len(search_result))
+        return str(Table(data, title=title).table)
 
     def format_movie_search_results(self, search_result: List[TMDBMovie]) -> str:
         """Formats TMDB movie search results as a table"""
@@ -90,7 +91,8 @@ class Output():
                 movie.original_language or '',
                 str(movie.runtime) if movie.runtime is not None else '',
             ])
-        return str(Table(data, title='Movie Search Results').table)
+        title = self.table_title('Movie Search Results', len(search_result))
+        return str(Table(data, title=title).table)
 
     def movies_table(self, movies: List[Movie], title: str = 'Tracked Movies') -> str:
         """Formats tracked movies as a table"""
@@ -104,6 +106,7 @@ class Output():
                 str(movie['runtime']) if movie['runtime'] is not None else '',
                 movie['watched'],
             ])
+        title = self.table_title(title, len(movies))
         return str(Table(data, title=title).table)
 
     def movies_json(self, movies: List[Movie]) -> str:
@@ -113,6 +116,7 @@ class Output():
     def format_episodes(self, show: Show, episodes: List[Episode]) -> str:
         """Formats as table list of episodes"""
         title = f"({show['id']}) {show['name']} - {show['premiered']}"
+        title = self.table_title(title, len(episodes))
         data = self._get_episodes_data(episodes)
         return str(Table(data, title=title).table)
 
@@ -162,6 +166,7 @@ class Output():
                 episode['airdate'],
                 episode['watched']
             ])
+        title = self.table_title(title, len(episodes))
         return str(Table(data, title=title).table)
 
     def shows_table(self, shows: List[Show]) -> str:
@@ -180,7 +185,7 @@ class Output():
                 show['premiered'],
                 show['status'],
             ])
-        title = 'Followed shows'
+        title = self.table_title('Followed shows', len(shows))
         return str(Table(data, title=title).table)
 
     def unfinished_shows_table(self, shows: List[ShowWithCount]) -> str:
@@ -205,7 +210,7 @@ class Output():
                 str(show['seen']),
                 str(show['total']-show['seen'])
             ])
-        title = 'Unfinished shows'
+        title = self.table_title('Unfinished shows', len(shows))
         return str(Table(data, title=title).table)
 
     def completed_shows_table(self, shows: List[Show]) -> str:
@@ -228,7 +233,7 @@ class Output():
                 show['status'],
             ])
             i = i + 1
-        title = 'Completed shows'
+        title = self.table_title('Completed shows', len(shows))
         table = Table(data, title=title)
         table.justify_columns[0] = 'right'
         table.justify_columns[1] = 'right'
@@ -253,6 +258,7 @@ class Output():
                 str(period_totals[date]['minutes']),
             ])
         title = f'Watchtime per {period}'
+        title = self.table_title(title, len(data) - 1)
         table = Table(data, title=title)
         table.justify_columns[1] = 'right'
         table.justify_columns[2] = 'right'
@@ -263,3 +269,19 @@ class Output():
     def episodes_json(self, episodes: List[DecoratedEpisode]) -> str:
         """Formats decorated episodes as json"""
         return json.dumps(episodes, sort_keys=True, indent=4)
+
+
+    def table_title(self, base_title: str, count: Optional[int] = None) -> str:
+        """
+        Generates a padded table title, optionally appending the item count.
+
+        :param base_title: The main text for the title.
+        :param count: Optional number of elements to display.
+        :return: A formatted string safe for terminaltables.
+        """
+        if count is not None:
+            title_text = f"{base_title} ({count})"
+        else:
+            title_text = base_title
+        
+        return f" {title_text.strip()} "
