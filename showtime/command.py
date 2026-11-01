@@ -1,13 +1,16 @@
 """Showtime Commands Module"""
 
+import argparse
 import os
 import sys
 from datetime import date, datetime, timedelta
 from functools import reduce
-from typing import Any, Dict, List, Optional, Tuple, cast
+from pathlib import Path
+from typing import Annotated, Any, Dict, List, Literal, Optional, Tuple, cast
 
 import cmd2
 from cmd2 import Cmd, Statement
+from cmd2.annotated import Argument
 
 from showtime.api import Api, get_default_pool_manager
 from showtime.config import Config
@@ -22,6 +25,13 @@ SHOW_CATEGORY = 'Show management'
 EPISODE_CATEGORY = 'Episode management'
 MOVIE_CATEGORY = 'Movie management'
 WATCHING_STATS_PERIODS = ('day', 'week', 'month', 'year')
+
+
+def _parse_iso_date(value: str) -> date:
+    try:
+        return datetime.fromisoformat(value).date()
+    except (ValueError, OverflowError) as error:
+        raise argparse.ArgumentTypeError('Invalid date') from error
 
 
 class Showtime(Cmd):
@@ -105,29 +115,31 @@ class Showtime(Cmd):
         self.output.poutput(self.output.format_movie_search_results(search_result))
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_add(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_add(self, movie_id: MovieId) -> None:
         """Add a movie from TMDB to your tracked list [movie_add <tmdb_id>]"""
         try:
-            movie = self.app.movie_add(MovieId(statement))
+            movie = self.app.movie_add(movie_id)
         except RuntimeError as error:
             self.output.perror(str(error))
             return
         self.output.poutput(f"Added movie: ({movie.id}) {movie.title}")
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_add_watched(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_add_watched(self, movie_id: MovieId) -> None:
         """Add a movie and mark it as watched [movie_add_watched <tmdb_id>]"""
         try:
-            movie = self.app.movie_add_watched(MovieId(statement), self._get_current_datetime())
+            movie = self.app.movie_add_watched(movie_id, self._get_current_datetime())
         except RuntimeError as error:
             self.output.perror(str(error))
             return
         self.output.poutput(f"Added and marked as watched: ({movie.id}) {movie.title}")
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_remove(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_remove(self, movie_id: MovieId) -> None:
         """Remove a tracked movie [movie_remove <tmdb_id>]"""
-        movie_id = MovieId(statement)
         movie = self.app.movie_get(movie_id)
         if not movie:
             self.output.perror(f'Movie {movie_id} not found')
@@ -142,22 +154,14 @@ class Showtime(Cmd):
         self.output.ppaged(self.output.movies_table(movies))
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_watched_between(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_watched_between(
+        self,
+        from_date: Annotated[date, Argument(converter=_parse_iso_date)],
+        to_date: Annotated[date, Argument(converter=_parse_iso_date)],
+        output_format: Annotated[Literal['table', 'json'], Argument(nargs='?')] = 'table',
+    ) -> None:
         """Show movies watched between two dates [movie_watched_between <from_date> <to_date> [format]]"""
-        try:
-            output_format = 'table'
-            split_arg = statement.split(' ')
-            if len(split_arg) < 3:
-                from_date_s, to_date_s = split_arg
-            else:
-                from_date_s, to_date_s, output_format = split_arg
-            from_date = datetime.fromisoformat(from_date_s).date()
-            to_date = datetime.fromisoformat(to_date_s).date()
-
-        except (ValueError, OverflowError):
-            self.output.perror("Invalid date")
-            return
-
         movies = self.app.movies_watched_between(from_date, to_date)
         sorted_movies = sorted(movies, key=lambda movie: movie['watched'])
         if output_format == 'json':
@@ -166,8 +170,7 @@ class Showtime(Cmd):
             movies_output = self.output.movies_table(sorted_movies, title='Watched movies')
         self.output.ppaged(movies_output)
 
-    def _set_movie_watched(self, statement: Statement, watched: bool) -> None:
-        movie_id = MovieId(statement)
+    def _set_movie_watched(self, movie_id: MovieId, watched: bool) -> None:
         movie = self.app.movie_get(movie_id)
         if not movie:
             self.output.perror(f'Movie {movie_id} not found')
@@ -175,17 +178,20 @@ class Showtime(Cmd):
         self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_watch(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_watch(self, movie_id: MovieId) -> None:
         """Mark a movie as watched [movie_watch <tmdb_id>]"""
-        self._set_movie_watched(statement, True)
+        self._set_movie_watched(movie_id, True)
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_unwatch(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_unwatch(self, movie_id: MovieId) -> None:
         """Mark a movie as unwatched [movie_unwatch <tmdb_id>]"""
-        self._set_movie_watched(statement, False)
+        self._set_movie_watched(movie_id, False)
 
     @cmd2.with_category(MOVIE_CATEGORY)
-    def do_movie_import_imdb_ratings(self, file_name: Statement) -> None:
+    @cmd2.with_annotated
+    def do_movie_import_imdb_ratings(self, file_name: Path) -> None:
         """Import watched movies from an IMDb ratings export [movie_import_imdb_ratings <filename>]"""
         try:
             imported, skipped = self.app.import_imdb_ratings(
@@ -197,11 +203,10 @@ class Showtime(Cmd):
         self.output.poutput(f"Imported {imported} movie ratings; skipped {skipped} rows")
 
     @cmd2.with_category(SHOW_CATEGORY)
-    def do_follow(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_follow(self, show_ids: str) -> None:
         """Follow one or more shows by ID [follow <show_id>[,<show_id>...]]"""
-        show_ids = self._get_list(statement)
-
-        for show_id in show_ids:
+        for show_id in self._get_list(show_ids):
             self.app.show_follow(show_id,
                                  on_episode_insert=self.output.status_on_episode_insert,
                                  on_episode_update=self.output.status_on_episode_update,
@@ -240,20 +245,23 @@ class Showtime(Cmd):
         self.prompt = self._get_prompt(show['name'])
 
     @cmd2.with_category(SHOW_CATEGORY)
-    def do_unset_show(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_unset_show(self) -> None:
         """Clear the active show from context [unset_show]"""
         self.current_show = None
         self.prompt = self._get_prompt()
 
     @cmd2.with_category(SHOW_CATEGORY)
-    def do_completed(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_completed(self) -> None:
         """List completed shows"""
         shows = self.app.show_get_completed()
         completed_shows_table = self.output.completed_shows_table(shows)
         self.output.ppaged(completed_shows_table)
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_sync(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_sync(self) -> None:
         """Refresh episodes for active shows from TVMaze [sync]"""
         self.output.pfeedback('Syncing shows...')
         self.app.sync(on_show_sync=self.output.status_on_show_sync,
@@ -263,7 +271,8 @@ class Showtime(Cmd):
         self.output.pfeedback('Done')
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_sync_all(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_sync_all(self) -> None:
         """Refresh all tracked shows from TVMaze [sync_all]"""
         self.output.pfeedback('Syncing shows...')
         self.app.sync(on_show_sync=self.output.status_on_show_sync,
@@ -273,10 +282,11 @@ class Showtime(Cmd):
         self.output.pfeedback('Done')
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_watch(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_watch(self, episode_ids: str) -> None:
         """Mark one or more episodes as watched [watch <episode_id,...>]"""
         when = self._get_current_datetime()
-        for episode_id in [e.strip() for e in statement.split(',')]:
+        for episode_id in [item.strip() for item in episode_ids.split(',')]:
             self.app.episode_update_watched(EpisodeId(episode_id), when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
@@ -306,9 +316,9 @@ class Showtime(Cmd):
         self.output.perror(f"No episodes left unwatched for `{show['name']}`")
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_delete_episode(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_delete_episode(self, episode_id: EpisodeId) -> None:
         """Delete an episode after confirmation [delete_episode <episode_id>]"""
-        episode_id = EpisodeId(statement)
         episode = self.app.episode_get(episode_id)
         if episode:
             show = self.app.show_get(ShowId(episode['show_id']))
@@ -322,10 +332,11 @@ class Showtime(Cmd):
         self.output.perror('Invalid episode_id')
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_unwatch(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_unwatch(self, episode_id: EpisodeId) -> None:
         """Mark an episode as unwatched [unwatch <episode_id>]"""
         when = self._get_current_datetime()
-        self.app.episode_update_not_watched(EpisodeId(statement), when)
+        self.app.episode_update_not_watched(episode_id, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all(self, statement: Statement) -> None:
@@ -342,21 +353,22 @@ class Showtime(Cmd):
         self.app.episodes_update_all_not_watched(show_id, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_watch_all_season(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_watch_all_season(self, show_id: ShowId, season: int) -> None:
         """Mark all episodes in a season as watched [watch_all_season <show_id> <season>]"""
-        show_id, season = statement.split(' ')
         when = self._get_current_datetime()
-        self.app.episodes_update_season_watched(ShowId(show_id), int(season), when)
+        self.app.episodes_update_season_watched(show_id, season, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_unwatch_all_season(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_unwatch_all_season(self, show_id: ShowId, season: int) -> None:
         """Mark all episodes in a season as unwatched [unwatch_all_season <show_id> <season>]"""
-        show_id, season = statement.split(' ')
         when = self._get_current_datetime()
-        self.app.episodes_update_season_not_watched(ShowId(show_id), int(season), when)
+        self.app.episodes_update_season_not_watched(show_id, season, when)
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_unwatched(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_unwatched(self) -> None:
         """List all unwatched episodes [unwatched]"""
         when = self._get_current_datetime()
         episodes = self.app.episodes_get_unwatched(when)
@@ -364,50 +376,39 @@ class Showtime(Cmd):
         self.output.poutput(episodes_table)
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_last_seen(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_last_seen(self, show_id: ShowId, season: int, episode: int) -> None:
         """Mark all episodes up to a specific episode as watched [last_seen <show_id> <season> <episode>]"""
-        show_id, season, episode = statement.split(' ')
         when = self._get_current_datetime()
-        count = self.app.episodes_watched_to_last_seen(ShowId(show_id), int(season), int(episode), when)
+        count = self.app.episodes_watched_to_last_seen(show_id, season, episode, when)
         self.output.poutput(f'{count} episodes marked as seen')
 
-    def do_config(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_config(self) -> None:
         """Show the current configuration [config]"""
         config = self.app.config_get()
         path = config.get('Database', 'Path')
         self.output.poutput(f'Database path: {path}')
 
-    def do_export(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_export(
+        self,
+        from_date: Annotated[date, Argument(converter=_parse_iso_date)],
+        to_date: Annotated[date, Argument(converter=_parse_iso_date)],
+    ) -> None:
         """Export watched episodes between two dates [export <from_date> <to_date>]"""
-        try:
-            from_date_s, to_date_s = statement.split(' ')
-            from_date = datetime.fromisoformat(from_date_s).date()
-            to_date = datetime.fromisoformat(to_date_s).date()
-
-        except (ValueError, OverflowError):
-            self.output.perror("Invalid date")
-            return
-
         episodes = self.app.episodes_watched_between(from_date, to_date)
         self.output.json(sorted(episodes, key=lambda k: k['watched']))
 
     @cmd2.with_category(EPISODE_CATEGORY)
-    def do_watched_between(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_watched_between(
+        self,
+        from_date: Annotated[date, Argument(converter=_parse_iso_date)],
+        to_date: Annotated[date, Argument(converter=_parse_iso_date)],
+        output_format: Annotated[Literal['table', 'json'], Argument(nargs='?')] = 'table',
+    ) -> None:
         """Show watched episodes between two dates [watched_between <from_date> <to_date> [format]]"""
-        try:
-            output_format = 'table'
-            split_arg = statement.split(' ')
-            if len(split_arg) < 3:
-                from_date_s, to_date_s = split_arg
-            else:
-                from_date_s, to_date_s, output_format = split_arg
-            from_date = datetime.fromisoformat(from_date_s).date()
-            to_date = datetime.fromisoformat(to_date_s).date()
-
-        except (ValueError, OverflowError):
-            self.output.perror("Invalid date")
-            return
-
         episodes = self.app.episodes_watched_between(from_date, to_date)
         sorted_episodes = sorted(episodes, key=lambda k: k['watched'])
         if output_format == 'json':
@@ -431,23 +432,23 @@ class Showtime(Cmd):
             sorted(episodes, key=lambda k: k['airdate']))
         self.output.ppaged(episodes_table)
 
-    def do_version(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_version(self) -> None:
         """Show the current version number"""
         self.output.poutput(__version__)
 
-    def do_patch_watchtime(self, file_name: Statement) -> None:
+    @cmd2.with_annotated
+    def do_patch_watchtime(self, file_name: Path) -> None:
         """Update episode watch times from a CSV file [patch_watchtime <file>]"""
         with open(file_name, newline='', encoding='UTF-8') as csv_file:
             self.app.episodes_patch_watchtime(csv_file)
 
-    def do_watching_stats(self, statement: Statement) -> None:
+    @cmd2.with_annotated
+    def do_watching_stats(
+        self,
+        period: Annotated[Literal['day', 'week', 'month', 'year'], Argument(nargs='?')] = 'month',
+    ) -> None:
         """Show watch-time statistics for a period [watching_stats <day|week|month|year>]"""
-        period = str(statement).strip().lower() or 'month'
-        if period not in WATCHING_STATS_PERIODS:
-            periods = ', '.join(WATCHING_STATS_PERIODS)
-            self.output.perror(f'Invalid period. Choose from: {periods}')
-            return
-
         watched = self.app.episodes_get_watched()
         watched_movies = self.app.movies_get_watched()
         episode_minutes = sum(ep['runtime'] or 0 for ep in watched)
@@ -500,7 +501,8 @@ class Showtime(Cmd):
         self.output.ppaged(summary_table)
 
     @cmd2.with_category(SHOW_CATEGORY)
-    def do_unfinished(self, _: Statement) -> None:
+    @cmd2.with_annotated
+    def do_unfinished(self) -> None:
         """List shows that are still in progress"""
         unfinished_shows = self.app.show_get_unfinished()
         unfinished_shows_table = self.output.unfinished_shows_table(unfinished_shows)
