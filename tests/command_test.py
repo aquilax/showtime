@@ -1,10 +1,10 @@
 """Commands tests"""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, Mock
 
-import cmd2_ext_test
 import pytest
 from cmd2 import CommandResult
+from cmd2.py_bridge import PyBridge
 from helpers import decorated_episode, episode, show, tv_maze_show
 
 from showtime.command import Showtime
@@ -12,10 +12,27 @@ from showtime.showtime import ShowtimeApp
 from showtime.types import TMDBMovie
 
 
-class ShowtimeTester(cmd2_ext_test.ExternalTestMixin, Showtime):
+class ShowtimeTester(Showtime):
     def __init__(self, *args, **kwargs):
-        # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
+        self._pybridge = PyBridge(self)
+
+    def app_cmd(self, command, echo=None) -> CommandResult:
+        try:
+            self._in_py = True
+            return self._pybridge(command, echo=echo)
+        finally:
+            self._in_py = False
+
+    def fixture_setup(self):
+        for func in self._preloop_hooks:
+            func()
+        self.preloop()
+
+    def fixture_teardown(self):
+        for func in self._postloop_hooks:
+            func()
+        self.postloop()
 
 
 @pytest.fixture
@@ -88,6 +105,15 @@ def test_movie_add(test_app):
     assert 'Added movie: (42) Test Movie' in str(out.stdout)
 
 
+def test_movie_add_rejects_non_integer_id(test_app):
+    test_app.app.movie_add = MagicMock()
+
+    out = test_app.app_cmd('movie_add invalid')
+
+    assert 'invalid int value' in str(out.stderr)
+    test_app.app.movie_add.assert_not_called()
+
+
 def test_movie_add_watched(test_app):
     test_app.app.movie_add_watched = MagicMock(return_value=TMDBMovie(42, 'Test Movie', '2020-01-01', 120))
 
@@ -150,6 +176,14 @@ def test_movie_import_imdb_ratings(test_app):
     test_app.app.import_imdb_ratings.assert_called_once()
     assert 'Resolving 1/1: Test Movie' in str(out.stdout)
     assert 'Imported 2 movie ratings; skipped 3 rows' in str(out.stdout)
+
+
+def test_follow_converts_comma_separated_ids(test_app):
+    test_app.app.show_follow = MagicMock()
+
+    test_app.app_cmd('follow 1,2')
+
+    assert [call.args[0] for call in test_app.app.show_follow.call_args_list] == [1, 2]
 
 
 def test_episodes(test_app):
@@ -444,6 +478,15 @@ def test_new_unwatched(test_app):
     assert out.data is None
 
 
+def test_new_unwatched_defaults_to_last_seven_days(test_app):
+    test_app.app.episodes_aired_unseen_between = MagicMock(return_value=[])
+    today = date.today()
+
+    test_app.app_cmd('new_unwatched')
+
+    test_app.app.episodes_aired_unseen_between.assert_called_once_with(today - timedelta(days=6), today)
+
+
 def test_watching_stats(test_app):
     test_app.app.episodes_get_watched = MagicMock(return_value=[
         episode | {'watched': '2020-01-01', 'show_id': 1},
@@ -502,7 +545,9 @@ def test_watching_stats_rejects_invalid_period(test_app):
 
     out = test_app.app_cmd('watching_stats decade')
 
-    assert 'Invalid period. Choose from: day, week, month, year' in str(out.stderr)
+    assert "invalid choice: 'decade'" in str(out.stderr)
+    assert 'choose from day' in str(out.stderr)
+    assert 'year' in str(out.stderr)
     test_app.app.episodes_get_watched.assert_not_called()
 
 
