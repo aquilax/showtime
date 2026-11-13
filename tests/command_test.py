@@ -7,7 +7,7 @@ from cmd2 import CommandResult
 from cmd2.py_bridge import PyBridge
 from helpers import decorated_episode, episode, show, tv_maze_show
 
-from showtime.command import Showtime
+from showtime.command import CompletionList, Showtime
 from showtime.showtime import ShowtimeApp
 from showtime.types import TMDBMovie
 
@@ -559,3 +559,11 @@ def test_watching_stats_rejects_invalid_period(test_app):
 ])
 def test_complete_watching_stats(test_app, text, expected):
     assert test_app.complete_watching_stats(text, '', 0, 0) == expected
+
+
+def test_complete_watching_stats_cmd2_compatibility(test_app):
+    completions = test_app.complete_watching_stats('w', '', 0, 0)
+
+    assert isinstance(completions, CompletionList)
+    assert completions == ['week']
+    assert completions.to_strings() == ['week']
