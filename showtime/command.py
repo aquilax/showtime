@@ -27,19 +27,6 @@ MOVIE_CATEGORY = 'Movie management'
 WATCHING_STATS_PERIODS = ('day', 'week', 'month', 'year')
 
 
-class CompletionList(list[str]):
-    """cmd2-compatible completion list.
-
-    Newer cmd2 versions expect completion handlers to return objects with a
-    ``to_strings()`` method, while older releases accept plain ``list[str]``
-    values. Subclassing ``list`` keeps the legacy behavior and adds the modern
-    hook required by newer cmd2 releases.
-    """
-
-    def to_strings(self) -> List[str]:
-        return [str(item) for item in self]
-
-
 def _parse_iso_date(value: str) -> date:
     try:
         return datetime.fromisoformat(value).date()
@@ -95,20 +82,34 @@ class Showtime(Cmd):
             return ShowId(self.current_show['id'])
         raise Exception('Please provide a show_id')
 
-    def complete_next(self, text: str, line: int, start_index: int, end_index: int) -> CompletionList:
+    def complete_next(self, text: str, line: int, start_index: int, end_index: int) -> cmd2.Completions:
         return self.complete_watch_next(text, line, start_index, end_index)
 
-    def complete_watch_next(self, text: str, _line: int, _start_index: int, _end_index: int) -> CompletionList:
-        return CompletionList(str(id) for id in self._show_ids if str(id).startswith(text))
+    def complete_watch_next(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+        return cmd2.Completions.from_values(
+            (str(id) for id in self._show_ids if str(id).startswith(text)),
+            is_sorted=True,
+        )
 
-    def complete_watch(self, text: str, _line: int, _start_index: int, _end_index: int) -> CompletionList:
-        return CompletionList(str(id) for id in self._episode_ids if str(id).startswith(text))
+    def complete_watch(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+        return cmd2.Completions.from_values(
+            (str(id) for id in self._episode_ids if str(id).startswith(text)),
+            is_sorted=True,
+        )
 
-    def complete_episodes(self, text: str, _line: int, _start_index: int, _end_index: int) -> CompletionList:
-        return CompletionList(str(id) for id in self._show_ids if str(id).startswith(text))
+    def complete_episodes(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+        return cmd2.Completions.from_values(
+            (str(id) for id in self._show_ids if str(id).startswith(text)),
+            is_sorted=True,
+        )
 
-    def complete_watching_stats(self, text: str, _line: int, _start_index: int, _end_index: int) -> CompletionList:
-        return CompletionList(period for period in WATCHING_STATS_PERIODS if period.startswith(text.lower()))
+    def complete_watching_stats(
+        self, text: str, _line: int, _start_index: int, _end_index: int
+    ) -> cmd2.Completions:
+        return cmd2.Completions.from_values(
+            (period for period in WATCHING_STATS_PERIODS if period.startswith(text.lower())),
+            is_sorted=True,
+        )
 
     @cmd2.with_category(SHOW_CATEGORY)
     def do_search(self, statement: Statement) -> None:
