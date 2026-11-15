@@ -86,8 +86,14 @@ class Showtime(Cmd):
         return self.complete_watch_next(text, line, start_index, end_index)
 
     def complete_watch_next(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+        values = [str(show_id) for show_id in self._show_ids if str(show_id).startswith(text)]
+        values.extend(
+            show['name']
+            for show in self.app.show_search(text)
+            if show['name'].casefold().startswith(text.casefold())
+        )
         return cmd2.Completions.from_values(
-            (str(id) for id in self._show_ids if str(id).startswith(text)),
+            sorted(values, key=str.casefold),
             is_sorted=True,
         )
 
@@ -189,7 +195,9 @@ class Showtime(Cmd):
         if not movie:
             self.output.perror(f'Movie {movie_id} not found')
             return
-        self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
+        updated_movie_ids = self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
+        if not watched and updated_movie_ids:
+            self.output.poutput(f'Movie {movie_id} marked as unwatched')
 
     @cmd2.with_category(MOVIE_CATEGORY)
     @cmd2.with_annotated
@@ -350,7 +358,9 @@ class Showtime(Cmd):
     def do_unwatch(self, episode_id: EpisodeId) -> None:
         """Mark an episode as unwatched [unwatch <episode_id>]"""
         when = self._get_current_datetime()
-        self.app.episode_update_not_watched(episode_id, when)
+        updated_episode_ids = self.app.episode_update_not_watched(episode_id, when)
+        if updated_episode_ids:
+            self.output.poutput(f'Episode {episode_id} marked as unwatched')
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all(self, statement: Statement) -> None:

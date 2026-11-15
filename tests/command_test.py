@@ -155,12 +155,22 @@ def test_movies(test_app):
 @pytest.mark.parametrize(('command', 'watched'), [('movie_watch', True), ('movie_unwatch', False)])
 def test_movie_watched_commands(test_app, command, watched):
     test_app.app.movie_get = MagicMock(return_value={'id': 42})
-    test_app.app.movie_update_watched = MagicMock()
+    test_app.app.movie_update_watched = MagicMock(return_value=[42])
 
     out = test_app.app_cmd(f'{command} 42')
 
     test_app.app.movie_get.assert_called_once_with(42)
     test_app.app.movie_update_watched.assert_called_once_with(42, watched, datetime(2020, 1, 1, 1, 0))
+    expected_output = 'Movie 42 marked as unwatched' if not watched else ''
+    assert str(out.stdout).strip() == expected_output
+
+
+def test_movie_unwatch_without_matching_movie_does_not_confirm(test_app):
+    test_app.app.movie_get = MagicMock(return_value={'id': 42})
+    test_app.app.movie_update_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd('movie_unwatch 42')
+
     assert str(out.stdout).strip() == ''
 
 
@@ -294,13 +304,22 @@ def test_delete(test_app):
 
 
 def test_unwatch(test_app):
-    test_app.app.episode_update_not_watched = MagicMock()
+    test_app.app.episode_update_not_watched = MagicMock(return_value=[1])
 
     out = test_app.app_cmd("unwatch 1")
 
     test_app.app.episode_update_not_watched.assert_called_once_with(1, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """""".strip()
+    assert str(out.stdout).strip() == "Episode 1 marked as unwatched"
+    assert out.data is None
+
+
+def test_unwatch_without_matching_episode_does_not_confirm(test_app):
+    test_app.app.episode_update_not_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd("unwatch 1")
+
+    assert str(out.stdout).strip() == ""
     assert out.data is None
 
 
@@ -566,3 +585,41 @@ def test_complete_watching_stats_cmd2_compatibility(test_app):
 
     assert isinstance(completions, Completions)
     assert completions.to_strings() == ('week',)
+
+
+@pytest.mark.parametrize(('text', 'expected'), [
+    ('the', ('The Good Place',)),
+    ('tHe', ('The Good Place',)),
+    ('unmatched', ()),
+])
+def test_complete_watch_next_show_names(test_app, text, expected):
+    test_app._show_ids = []
+    test_app.app.show_search = MagicMock(return_value=[
+        {'id': 42, 'name': 'The Good Place'},
+        {'id': 43, 'name': 'Something Themed'},
+    ])
+
+    completions = test_app.complete_watch_next(text, '', 0, 0)
+
+    assert completions.to_strings() == expected
+
+
+def test_complete_watch_next_preserves_show_ids(test_app):
+    test_app._show_ids = [42, 24]
+    test_app.app.show_search = MagicMock(return_value=[])
+
+    completions = test_app.complete_watch_next('4', '', 0, 0)
+
+    assert completions.to_strings() == ('42',)
+
+
+@pytest.mark.parametrize('command', ['next', 'watch_next'])
+def test_complete_next_cmd2_compatibility(test_app, command):
+    test_app._show_ids = []
+    test_app.app.show_search = MagicMock(return_value=[{'id': 42, 'name': 'The Good Place'}])
+    line = f'{command} tHe'
+
+    completions = test_app.complete('tHe', line, len(command) + 1, len(line))
+
+    assert isinstance(completions, Completions)
+    assert completions.to_strings() == ('The Good Place',)
