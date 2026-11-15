@@ -155,12 +155,22 @@ def test_movies(test_app):
 @pytest.mark.parametrize(('command', 'watched'), [('movie_watch', True), ('movie_unwatch', False)])
 def test_movie_watched_commands(test_app, command, watched):
     test_app.app.movie_get = MagicMock(return_value={'id': 42})
-    test_app.app.movie_update_watched = MagicMock()
+    test_app.app.movie_update_watched = MagicMock(return_value=[42])
 
     out = test_app.app_cmd(f'{command} 42')
 
     test_app.app.movie_get.assert_called_once_with(42)
     test_app.app.movie_update_watched.assert_called_once_with(42, watched, datetime(2020, 1, 1, 1, 0))
+    expected_output = 'Movie 42 marked as unwatched' if not watched else ''
+    assert str(out.stdout).strip() == expected_output
+
+
+def test_movie_unwatch_without_matching_movie_does_not_confirm(test_app):
+    test_app.app.movie_get = MagicMock(return_value={'id': 42})
+    test_app.app.movie_update_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd('movie_unwatch 42')
+
     assert str(out.stdout).strip() == ''
 
 
@@ -294,13 +304,22 @@ def test_delete(test_app):
 
 
 def test_unwatch(test_app):
-    test_app.app.episode_update_not_watched = MagicMock()
+    test_app.app.episode_update_not_watched = MagicMock(return_value=[1])
 
     out = test_app.app_cmd("unwatch 1")
 
     test_app.app.episode_update_not_watched.assert_called_once_with(1, datetime(2020, 1, 1, 1, 0))
     assert isinstance(out, CommandResult)
-    assert str(out.stdout).strip() == """""".strip()
+    assert str(out.stdout).strip() == "Episode 1 marked as unwatched"
+    assert out.data is None
+
+
+def test_unwatch_without_matching_episode_does_not_confirm(test_app):
+    test_app.app.episode_update_not_watched = MagicMock(return_value=[])
+
+    out = test_app.app_cmd("unwatch 1")
+
+    assert str(out.stdout).strip() == ""
     assert out.data is None
 
 

@@ -189,7 +189,9 @@ class Showtime(Cmd):
         if not movie:
             self.output.perror(f'Movie {movie_id} not found')
             return
-        self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
+        updated_movie_ids = self.app.movie_update_watched(movie_id, watched, self._get_current_datetime())
+        if not watched and updated_movie_ids:
+            self.output.poutput(f'Movie {movie_id} marked as unwatched')
 
     @cmd2.with_category(MOVIE_CATEGORY)
     @cmd2.with_annotated
@@ -350,7 +352,9 @@ class Showtime(Cmd):
     def do_unwatch(self, episode_id: EpisodeId) -> None:
         """Mark an episode as unwatched [unwatch <episode_id>]"""
         when = self._get_current_datetime()
-        self.app.episode_update_not_watched(episode_id, when)
+        updated_episode_ids = self.app.episode_update_not_watched(episode_id, when)
+        if updated_episode_ids:
+            self.output.poutput(f'Episode {episode_id} marked as unwatched')
 
     @cmd2.with_category(EPISODE_CATEGORY)
     def do_watch_all(self, statement: Statement) -> None:
