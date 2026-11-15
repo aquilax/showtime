@@ -288,6 +288,19 @@ def test_next(test_app):
     assert out.data is None
 
 
+@pytest.mark.parametrize('query', ['Doctor Who', '"Doctor Who"'])
+def test_next_resolves_multiword_show_name(test_app, query):
+    tracked_show = show | {'name': 'Doctor Who'}
+    test_app.app.show_search = MagicMock(return_value=[tracked_show])
+    test_app.app.show_get = MagicMock(return_value=tracked_show)
+    test_app.app.episode_get_next_unwatched = MagicMock(return_value=None)
+
+    test_app.app_cmd(f'next {query}')
+
+    test_app.app.show_search.assert_called_once_with('Doctor Who')
+    test_app.app.show_get.assert_called_once_with(1)
+
+
 def test_delete(test_app):
     test_app.app.episode_get = MagicMock(return_value=episode)
     test_app.app.show_get = MagicMock(return_value=show)
@@ -613,8 +626,17 @@ def test_complete_watch_next_preserves_show_ids(test_app):
     assert completions.to_strings() == ('42',)
 
 
-@pytest.mark.parametrize('command', ['next', 'watch_next'])
-def test_complete_next_cmd2_compatibility(test_app, command):
+def test_complete_show_name_does_not_suggest_second_argument(test_app):
+    test_app.app.show_search = MagicMock(return_value=[{'id': 42, 'name': 'Under the Dome'}])
+    line = 'episodes "Under the Dome" '
+
+    completions = test_app.complete('', line, len(line), len(line))
+
+    assert completions.to_strings() == ()
+
+
+@pytest.mark.parametrize('command', ['next', 'watch_next', 'episodes'])
+def test_complete_show_name_commands_cmd2_compatibility(test_app, command):
     test_app._show_ids = []
     test_app.app.show_search = MagicMock(return_value=[{'id': 42, 'name': 'The Good Place'}])
     line = f'{command} tHe'
