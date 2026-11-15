@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shlex
 import sys
 from datetime import date, datetime, timedelta
 from functools import reduce
@@ -67,6 +68,7 @@ class Showtime(Cmd):
 
     def _get_show_id(self, query: str) -> ShowId:
         """Tries to get show_id from user input"""
+        query = ' '.join(shlex.split(query))
         if query:
             try:
                 return ShowId(query)
@@ -82,10 +84,13 @@ class Showtime(Cmd):
             return ShowId(self.current_show['id'])
         raise Exception('Please provide a show_id')
 
-    def complete_next(self, text: str, line: int, start_index: int, end_index: int) -> cmd2.Completions:
+    def complete_next(self, text: str, line: str, start_index: int, end_index: int) -> cmd2.Completions:
         return self.complete_watch_next(text, line, start_index, end_index)
 
-    def complete_watch_next(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+    def complete_watch_next(self, text: str, line: str, start_index: int, end_index: int) -> cmd2.Completions:
+        tokens, _ = self.tokens_for_completion(line, start_index, end_index)
+        if len(tokens) > 2:
+            return cmd2.Completions()
         values = [str(show_id) for show_id in self._show_ids if str(show_id).startswith(text)]
         values.extend(
             show['name']
@@ -97,20 +102,17 @@ class Showtime(Cmd):
             is_sorted=True,
         )
 
-    def complete_watch(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+    def complete_watch(self, text: str, _line: str, _start_index: int, _end_index: int) -> cmd2.Completions:
         return cmd2.Completions.from_values(
             (str(id) for id in self._episode_ids if str(id).startswith(text)),
             is_sorted=True,
         )
 
-    def complete_episodes(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
-        return cmd2.Completions.from_values(
-            (str(id) for id in self._show_ids if str(id).startswith(text)),
-            is_sorted=True,
-        )
+    def complete_episodes(self, text: str, _line: str, _start_index: int, _end_index: int) -> cmd2.Completions:
+        return self.complete_watch_next(text, _line, _start_index, _end_index)
 
     def complete_watching_stats(
-        self, text: str, _line: int, _start_index: int, _end_index: int
+        self, text: str, _line: str, _start_index: int, _end_index: int
     ) -> cmd2.Completions:
         return cmd2.Completions.from_values(
             (period for period in WATCHING_STATS_PERIODS if period.startswith(text.lower())),
