@@ -86,8 +86,14 @@ class Showtime(Cmd):
         return self.complete_watch_next(text, line, start_index, end_index)
 
     def complete_watch_next(self, text: str, _line: int, _start_index: int, _end_index: int) -> cmd2.Completions:
+        values = [str(show_id) for show_id in self._show_ids if str(show_id).startswith(text)]
+        values.extend(
+            show['name']
+            for show in self.app.show_search(text)
+            if show['name'].casefold().startswith(text.casefold())
+        )
         return cmd2.Completions.from_values(
-            (str(id) for id in self._show_ids if str(id).startswith(text)),
+            sorted(values, key=str.casefold),
             is_sorted=True,
         )
 

@@ -585,3 +585,41 @@ def test_complete_watching_stats_cmd2_compatibility(test_app):
 
     assert isinstance(completions, Completions)
     assert completions.to_strings() == ('week',)
+
+
+@pytest.mark.parametrize(('text', 'expected'), [
+    ('the', ('The Good Place',)),
+    ('tHe', ('The Good Place',)),
+    ('unmatched', ()),
+])
+def test_complete_watch_next_show_names(test_app, text, expected):
+    test_app._show_ids = []
+    test_app.app.show_search = MagicMock(return_value=[
+        {'id': 42, 'name': 'The Good Place'},
+        {'id': 43, 'name': 'Something Themed'},
+    ])
+
+    completions = test_app.complete_watch_next(text, '', 0, 0)
+
+    assert completions.to_strings() == expected
+
+
+def test_complete_watch_next_preserves_show_ids(test_app):
+    test_app._show_ids = [42, 24]
+    test_app.app.show_search = MagicMock(return_value=[])
+
+    completions = test_app.complete_watch_next('4', '', 0, 0)
+
+    assert completions.to_strings() == ('42',)
+
+
+@pytest.mark.parametrize('command', ['next', 'watch_next'])
+def test_complete_next_cmd2_compatibility(test_app, command):
+    test_app._show_ids = []
+    test_app.app.show_search = MagicMock(return_value=[{'id': 42, 'name': 'The Good Place'}])
+    line = f'{command} tHe'
+
+    completions = test_app.complete('tHe', line, len(command) + 1, len(line))
+
+    assert isinstance(completions, Completions)
+    assert completions.to_strings() == ('The Good Place',)
